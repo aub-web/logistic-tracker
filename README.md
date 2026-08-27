@@ -13,20 +13,23 @@ Requests are pulled in from the Google Sheets that sit behind these two forms:
 
 Each has an **all requests** view plus **External Partner** / **Direct
 Business** sub-sections in the sidebar (Outbound-type requests only show up
-in the "all" view), a **search box** (business, contact, SDR, or Req. ID),
-and a **status** control — click **In Progress** or **Dispatched** directly
-rather than toggling. Whoever is logged in when they change a status gets
-recorded in the **Updated By** column (the name entered at login — see
-"Identity" below). A **Summary** page totals dispatched devices by type
-(Mono iPhones / Mono Insta 360 / Multicam / Other).
+in the "all" view), filters (**search**, **SDR**, **device type** — device
+requests only, **date range**), an **Export CSV** button that respects
+whatever filters are active, and a **status** control — click **In
+Progress** or **Dispatched** directly rather than toggling. Whoever is
+logged in when they change a status gets recorded in the **Updated By**
+column (see "Identity" below). A **Summary** page totals dispatched devices
+by type (Mono iPhones / Mono Insta 360 / Multicam / Other).
 
 ### Identity
 
-Login asks for a name alongside the shared PIN — everyone uses the same
-`ADMIN_PIN`, but the name is what's recorded in `lastChangedBy` when someone
-sets a request's status. It's not a real per-person account (no password,
-no permissions difference), just enough to answer "who marked this
-dispatched" without building full user management.
+Login picks a name from a fixed roster (`src/lib/team.ts`) alongside the
+shared PIN — everyone uses the same `ADMIN_PIN`, but the name is what's
+recorded in `lastChangedBy` when someone sets a request's status, and is
+validated server-side too (not just a client-side dropdown), so the tracker
+only recognizes the Logistics team. It's not a real per-person account (no
+password, no permissions difference) — to change who's on the roster, edit
+`TEAM_MEMBERS` in `src/lib/team.ts`.
 
 ### About the existing "Status" column in the Sheets
 
@@ -123,4 +126,9 @@ either platform's pipeline:
   `lastChangedBy` from the session), sync.
 - `src/lib/admin-session.ts` / `src/lib/admin-auth.ts` — signed, short-lived
   admin session cookie.
+- `src/lib/team.ts` — the login roster.
+- `src/app/api/export/` — CSV export routes, one per request type, filtered
+  the same way as the on-screen table.
+- `src/components/RequestFilters.tsx` — search/SDR/device/date filter form
+  shared by all six request views.
 - `src/proxy.ts` — protects the dashboard routes server-side.
