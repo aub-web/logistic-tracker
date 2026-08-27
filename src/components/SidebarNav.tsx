@@ -1,0 +1,194 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import LogoutButton from "@/components/LogoutButton";
+
+function BoxIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <path
+        d="M10 2.5 17 6.25v7.5L10 17.5l-7-3.75v-7.5L10 2.5Z"
+        stroke="white"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M3 6.25 10 10l7-3.75M10 10v7.5" stroke="white" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SwapIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <path
+        d="M4 7h11l-2.5-2.5M16 13H5l2.5 2.5"
+        stroke="white"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function ChartIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <path d="M4 16V9M10 16V4M16 16v-6" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M2.5 16.5h15" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      className={`h-3.5 w-3.5 shrink-0 text-white/50 transition-transform ${open ? "rotate-90" : ""}`}
+    >
+      <path d="M7 5l6 5-6 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+const NAV_SECTIONS = [
+  {
+    href: "/device-requests",
+    label: "Device Request",
+    color: "bg-sky-500",
+    icon: BoxIcon,
+    children: [
+      { href: "/device-requests/external-partner", label: "External Partner" },
+      { href: "/device-requests/direct-business", label: "Direct Business" },
+    ],
+  },
+  {
+    href: "/swapping-requests",
+    label: "Swapping Request",
+    color: "bg-violet-500",
+    icon: SwapIcon,
+    children: [
+      { href: "/swapping-requests/external-partner", label: "External Partner" },
+      { href: "/swapping-requests/direct-business", label: "Direct Business" },
+    ],
+  },
+];
+
+export default function SidebarNav({ name }: { name: string }) {
+  const pathname = usePathname();
+  // Sections default open when the current page belongs to them, and closed
+  // otherwise — this set only tracks manual clicks that flip a section away
+  // from that default, so it never needs to resync via an effect when the
+  // route (and therefore the default) changes.
+  const [toggled, setToggled] = useState<Set<string>>(new Set());
+
+  function isSectionOpen(href: string): boolean {
+    const defaultOpen = pathname.startsWith(href);
+    return toggled.has(href) ? !defaultOpen : defaultOpen;
+  }
+
+  function toggleSection(href: string) {
+    setToggled((prev) => {
+      const next = new Set(prev);
+      if (next.has(href)) next.delete(href);
+      else next.add(href);
+      return next;
+    });
+  }
+
+  return (
+    <aside className="flex w-60 shrink-0 flex-col bg-[#14293D]">
+      <div className="px-5 py-6">
+        <p className="text-base font-semibold tracking-tight text-white">
+          Atlas Capture
+        </p>
+        <p className="mt-0.5 text-xs text-white/60">Logistics PH Team</p>
+      </div>
+
+      <nav className="flex-1 space-y-1 px-3">
+        {NAV_SECTIONS.map((section) => {
+          const active = pathname.startsWith(section.href);
+          const open = isSectionOpen(section.href);
+          const Icon = section.icon;
+
+          return (
+            <div key={section.href}>
+              <div
+                className={`flex items-center rounded-lg border-l-2 transition ${
+                  active ? "border-emerald-400 bg-white/10" : "border-transparent hover:bg-white/5"
+                }`}
+              >
+                <Link
+                  href={section.href}
+                  className={`flex flex-1 items-center gap-3 py-2 pl-2.5 pr-1 text-sm font-medium ${
+                    active ? "text-white" : "text-white/70 hover:text-white"
+                  }`}
+                >
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${section.color}`}
+                  >
+                    <Icon />
+                  </span>
+                  {section.label}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => toggleSection(section.href)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center"
+                  aria-label={open ? `Collapse ${section.label}` : `Expand ${section.label}`}
+                >
+                  <ChevronIcon open={open} />
+                </button>
+              </div>
+
+              {open && (
+                <div className="ml-9 mt-1 space-y-0.5 border-l border-white/10 pl-3">
+                  {section.children.map((child) => {
+                    const childActive = pathname === child.href;
+                    return (
+                      <Link
+                        key={child.href}
+                        href={child.href}
+                        className={`block rounded-md px-2 py-1.5 text-xs font-medium transition ${
+                          childActive
+                            ? "bg-white/10 text-white"
+                            : "text-white/60 hover:bg-white/5 hover:text-white"
+                        }`}
+                      >
+                        {child.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        <Link
+          href="/summary"
+          className={`flex items-center gap-3 rounded-lg border-l-2 py-2 pl-2.5 pr-3 text-sm font-medium transition ${
+            pathname === "/summary"
+              ? "border-emerald-400 bg-white/10 text-white"
+              : "border-transparent text-white/70 hover:bg-white/5 hover:text-white"
+          }`}
+        >
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-emerald-500">
+            <ChartIcon />
+          </span>
+          Summary
+        </Link>
+      </nav>
+
+      <div className="border-t border-white/10 px-3 py-4">
+        <p className="truncate px-2.5 pb-2 text-xs text-white/50" title={name}>
+          Signed in as <span className="font-medium text-white/80">{name}</span>
+        </p>
+        <LogoutButton />
+      </div>
+    </aside>
+  );
+}

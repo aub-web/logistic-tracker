@@ -1,0 +1,113 @@
+// Prisma schema for the Atlas Capture logistics tracker.
+// Runs on Postgres (e.g. Neon) via the pg driver adapter — see
+// src/lib/prisma.ts. Rows are pulled in from the Google Sheets behind the
+// Device Request and Swapping Request forms — see src/lib/sync.ts.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RequestStatus {
+  IN_PROGRESS
+  DISPATCHED
+}
+
+enum DeviceRequestType {
+  DROP_OFF
+  REPLACEMENT
+  PULL_OUT
+}
+
+enum BusinessType {
+  DIRECT_BUSINESS
+  EXTERNAL_PARTNER
+  OUTBOUND
+}
+
+model DeviceRequest {
+  id String @id @default(cuid())
+
+  // The sheet's own "Request ID" column (e.g. "REQ-0132"), assigned by the
+  // existing Apps Script tracker. Used to dedupe on sync — stable even if
+  // rows get sorted, filtered, or deleted, unlike a row number. Falls back
+  // to a synthesized "ROW-<n>" id for older rows the tracker never stamped.
+  requestId String @unique
+
+  // "Timestamp" column Google Forms adds automatically.
+  submittedAt DateTime @db.Timestamptz(3)
+
+  requesterEmail String
+
+  // Kept as raw form text (not parsed into a Date) since the sheet's date/time
+  // columns are free-form display strings, not needed for sorting — submittedAt
+  // already gives chronological order.
+  requestDate String
+  requestTime String
+
+  requestType DeviceRequestType
+
+  sdrName String
+  ssName  String?
+
+  businessType    BusinessType
+  businessName    String
+  businessAddress String
+  contactPerson   String
+  contactNumber   String
+
+  deliveryMode String
+  deviceType   String
+  quantity     Int
+
+  status       RequestStatus @default(IN_PROGRESS)
+  dispatchedAt DateTime?     @db.Timestamptz(3)
+
+  // Name of whoever last changed `status` from the tracker UI (set at login,
+  // not a full user account). Null until someone has touched it here.
+  lastChangedBy String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([status])
+}
+
+model SwappingRequest {
+  id String @id @default(cuid())
+
+  requestId   String   @unique
+  submittedAt DateTime @db.Timestamptz(3)
+
+  requesterEmail String
+
+  swappingDate String
+  swappingTime String
+
+  sdrName String
+  ssName  String?
+
+  businessType    BusinessType
+  businessName    String
+  businessAddress String
+  contactPerson   String
+  contactNumber   String
+
+  sdCardCount Int
+
+  status       RequestStatus @default(IN_PROGRESS)
+  dispatchedAt DateTime?     @db.Timestamptz(3)
+
+  // Name of whoever last changed `status` from the tracker UI (set at login,
+  // not a full user account). Null until someone has touched it here.
+  lastChangedBy String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([status])
+}

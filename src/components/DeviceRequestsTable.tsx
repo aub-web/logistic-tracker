@@ -1,0 +1,89 @@
+import { setDeviceRequestStatus } from "@/lib/actions/request-actions";
+import StatusToggleButton from "@/components/StatusToggleButton";
+import type { DeviceRequestModel } from "@/generated/prisma/models";
+
+const REQUEST_TYPE_LABEL: Record<string, string> = {
+  DROP_OFF: "Drop-off",
+  REPLACEMENT: "Replacement",
+  PULL_OUT: "Pull-out",
+};
+
+const BUSINESS_TYPE_LABEL: Record<string, string> = {
+  DIRECT_BUSINESS: "Direct Business",
+  EXTERNAL_PARTNER: "External Partner",
+  OUTBOUND: "Outbound",
+};
+
+export default function DeviceRequestsTable({ requests }: { requests: DeviceRequestModel[] }) {
+  return (
+    <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+      <table className="w-full text-left text-sm">
+        <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
+          <tr>
+            <th className="px-4 py-3 font-medium">Req. ID</th>
+            <th className="px-4 py-3 font-medium">Submitted</th>
+            <th className="px-4 py-3 font-medium">Type</th>
+            <th className="px-4 py-3 font-medium">Business</th>
+            <th className="px-4 py-3 font-medium">Contact</th>
+            <th className="px-4 py-3 font-medium">Address</th>
+            <th className="px-4 py-3 font-medium">Delivery</th>
+            <th className="px-4 py-3 font-medium">Device</th>
+            <th className="px-4 py-3 font-medium">Qty</th>
+            <th className="px-4 py-3 font-medium">SDR / SS</th>
+            <th className="px-4 py-3 font-medium">Status</th>
+            <th className="px-4 py-3 font-medium">Updated By</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-zinc-100">
+          {requests.length === 0 && (
+            <tr>
+              <td colSpan={12} className="px-4 py-8 text-center text-sm text-zinc-500">
+                No device requests found.
+              </td>
+            </tr>
+          )}
+          {requests.map((r) => (
+            <tr key={r.id}>
+              <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-zinc-500">
+                {r.requestId}
+              </td>
+              <td className="whitespace-nowrap px-4 py-3 text-zinc-600">
+                {r.submittedAt.toLocaleString("en-PH", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
+              </td>
+              <td className="px-4 py-3 font-medium text-zinc-900">
+                {REQUEST_TYPE_LABEL[r.requestType] ?? r.requestType}
+              </td>
+              <td className="px-4 py-3">
+                <div className="font-medium text-zinc-900">{r.businessName}</div>
+                <div className="text-xs text-zinc-500">
+                  {BUSINESS_TYPE_LABEL[r.businessType] ?? r.businessType}
+                </div>
+              </td>
+              <td className="px-4 py-3 text-zinc-600">
+                <div>{r.contactPerson}</div>
+                <div className="text-xs text-zinc-500">{r.contactNumber}</div>
+              </td>
+              <td className="max-w-xs px-4 py-3 text-zinc-600">{r.businessAddress}</td>
+              <td className="px-4 py-3 text-zinc-600">{r.deliveryMode}</td>
+              <td className="px-4 py-3 text-zinc-600">{r.deviceType}</td>
+              <td className="px-4 py-3 text-zinc-600">{r.quantity}</td>
+              <td className="px-4 py-3 text-zinc-600">
+                <div>{r.sdrName}</div>
+                {r.ssName && <div className="text-xs text-zinc-500">{r.ssName}</div>}
+              </td>
+              <td className="px-4 py-3">
+                <StatusToggleButton id={r.id} status={r.status} action={setDeviceRequestStatus} />
+              </td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs text-zinc-500">
+                {r.lastChangedBy ?? "—"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
