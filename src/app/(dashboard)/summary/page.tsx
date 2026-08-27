@@ -1,4 +1,4 @@
-import { getDeployedDeviceSummary, getBusinessDeviceSummary, BUSINESS_SUMMARY_CATEGORIES } from "@/lib/data";
+import { getDeployedDeviceSummary, getBusinessDeviceSummary } from "@/lib/data";
 import BusinessSummaryTable from "@/components/BusinessSummaryTable";
 import ExportCsvLink from "@/components/ExportCsvLink";
 
@@ -38,7 +38,7 @@ export default async function SummaryPage() {
         <ExportCsvLink href="/api/export/summary" />
       </div>
 
-      <BusinessSummaryTable rows={businessRows} categories={BUSINESS_SUMMARY_CATEGORIES} />
+      <BusinessSummaryTable rows={businessRows} />
     </div>
   );
 }
