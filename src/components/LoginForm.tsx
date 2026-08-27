@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 import { loginAdmin } from "@/lib/actions/admin-auth-actions";
+import { TEAM_MEMBERS } from "@/lib/team";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -32,17 +33,23 @@ export default function LoginForm() {
         <label htmlFor="name" className="sr-only">
           Your name
         </label>
-        <input
+        <select
           id="name"
-          type="text"
-          autoComplete="name"
           autoFocus
           required
-          placeholder="Your name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full rounded-xl border border-zinc-300 px-4 py-3.5 text-center text-base text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
-        />
+          className="w-full rounded-xl border border-zinc-300 bg-white px-4 py-3.5 text-center text-base text-zinc-900 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
+        >
+          <option value="" disabled>
+            Select your name
+          </option>
+          {TEAM_MEMBERS.map((member) => (
+            <option key={member} value={member}>
+              {member}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>

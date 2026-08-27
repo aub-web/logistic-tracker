@@ -1,15 +1,34 @@
-import { listSwappingRequests } from "@/lib/data";
+import { listSwappingRequests, listSwappingRequestSdrNames } from "@/lib/data";
+import { buildFilterQueryString } from "@/lib/filter-query";
 import SwappingRequestsTable from "@/components/SwappingRequestsTable";
 import SyncButton from "@/components/SyncButton";
-import SearchBar from "@/components/SearchBar";
+import RequestFilters from "@/components/RequestFilters";
+import ExportCsvLink from "@/components/ExportCsvLink";
 
 export default async function SwappingRequestsDirectBusinessPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; sdr?: string; from?: string; to?: string }>;
 }) {
-  const { q } = await searchParams;
-  const requests = await listSwappingRequests("DIRECT_BUSINESS", q);
+  const { q, sdr, from, to } = await searchParams;
+  const [requests, sdrOptions] = await Promise.all([
+    listSwappingRequests({
+      businessType: "DIRECT_BUSINESS",
+      query: q,
+      sdrName: sdr,
+      dateFrom: from,
+      dateTo: to,
+    }),
+    listSwappingRequestSdrNames(),
+  ]);
+
+  const exportHref = `/api/export/swapping-requests${buildFilterQueryString({
+    q,
+    sdr,
+    from,
+    to,
+    businessType: "DIRECT_BUSINESS",
+  })}`;
 
   return (
     <div>
@@ -22,12 +41,20 @@ export default async function SwappingRequestsDirectBusinessPage({
             SD card swap requests from Direct Business accounts.
           </p>
         </div>
-        <SyncButton />
+        <div className="flex gap-2">
+          <ExportCsvLink href={exportHref} />
+          <SyncButton />
+        </div>
       </div>
 
-      <div className="mt-4">
-        <SearchBar defaultValue={q} placeholder="Search business, contact, SDR, or req. ID" />
-      </div>
+      <RequestFilters
+        query={q}
+        sdrName={sdr}
+        dateFrom={from}
+        dateTo={to}
+        sdrOptions={sdrOptions}
+        basePath="/swapping-requests/direct-business"
+      />
 
       <SwappingRequestsTable requests={requests} />
     </div>

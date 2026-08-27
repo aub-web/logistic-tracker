@@ -11,8 +11,9 @@ export default function LoginPage() {
           Logistics Tracker
         </h1>
         <p className="mt-2 text-center text-sm text-zinc-500">
-          Enter your name and the admin PIN to view and manage requests. Your
-          name is recorded against any status change you make.
+          For the Logistics PH team only. Select your name and enter the
+          admin PIN — your name is recorded against any status change you
+          make.
         </p>
         <LoginForm />
       </div>

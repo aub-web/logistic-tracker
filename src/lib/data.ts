@@ -33,26 +33,95 @@ function swappingSearchFilter(query: string): Prisma.SwappingRequestWhereInput {
   };
 }
 
-export function listDeviceRequests(businessType?: BusinessType, query?: string) {
+/** Inclusive submittedAt range from "YYYY-MM-DD" date-input strings. */
+function dateRangeFilter(
+  dateFrom?: string,
+  dateTo?: string,
+): { gte?: Date; lte?: Date } | undefined {
+  if (!dateFrom && !dateTo) return undefined;
+  const range: { gte?: Date; lte?: Date } = {};
+
+  if (dateFrom) {
+    const d = new Date(`${dateFrom}T00:00:00`);
+    if (!Number.isNaN(d.getTime())) range.gte = d;
+  }
+  if (dateTo) {
+    const d = new Date(`${dateTo}T23:59:59.999`);
+    if (!Number.isNaN(d.getTime())) range.lte = d;
+  }
+
+  return range;
+}
+
+export interface DeviceRequestFilters {
+  businessType?: BusinessType;
+  query?: string;
+  sdrName?: string;
+  deviceType?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export function listDeviceRequests(filters: DeviceRequestFilters = {}) {
+  const { businessType, query, sdrName, deviceType, dateFrom, dateTo } = filters;
   const q = query?.trim();
+  const submittedAt = dateRangeFilter(dateFrom, dateTo);
+
   return prisma.deviceRequest.findMany({
     where: {
       ...(businessType ? { businessType } : {}),
+      ...(sdrName ? { sdrName } : {}),
+      ...(deviceType ? { deviceType } : {}),
+      ...(submittedAt ? { submittedAt } : {}),
       ...(q ? deviceSearchFilter(q) : {}),
     },
     orderBy: { submittedAt: "desc" },
   });
 }
 
-export function listSwappingRequests(businessType?: BusinessType, query?: string) {
+export interface SwappingRequestFilters {
+  businessType?: BusinessType;
+  query?: string;
+  sdrName?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export function listSwappingRequests(filters: SwappingRequestFilters = {}) {
+  const { businessType, query, sdrName, dateFrom, dateTo } = filters;
   const q = query?.trim();
+  const submittedAt = dateRangeFilter(dateFrom, dateTo);
+
   return prisma.swappingRequest.findMany({
     where: {
       ...(businessType ? { businessType } : {}),
+      ...(sdrName ? { sdrName } : {}),
+      ...(submittedAt ? { submittedAt } : {}),
       ...(q ? swappingSearchFilter(q) : {}),
     },
     orderBy: { submittedAt: "desc" },
   });
+}
+
+function nonEmptySorted(values: string[]): string[] {
+  return Array.from(new Set(values.map((v) => v.trim()).filter(Boolean))).sort((a, b) =>
+    a.localeCompare(b),
+  );
+}
+
+export async function listDeviceRequestSdrNames(): Promise<string[]> {
+  const rows = await prisma.deviceRequest.findMany({ select: { sdrName: true } });
+  return nonEmptySorted(rows.map((r) => r.sdrName));
+}
+
+export async function listDeviceRequestDeviceTypes(): Promise<string[]> {
+  const rows = await prisma.deviceRequest.findMany({ select: { deviceType: true } });
+  return nonEmptySorted(rows.map((r) => r.deviceType));
+}
+
+export async function listSwappingRequestSdrNames(): Promise<string[]> {
+  const rows = await prisma.swappingRequest.findMany({ select: { sdrName: true } });
+  return nonEmptySorted(rows.map((r) => r.sdrName));
 }
 
 export interface DeviceCategorySummary {

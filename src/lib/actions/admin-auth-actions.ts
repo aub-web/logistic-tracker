@@ -7,6 +7,7 @@ import {
   createSessionToken,
   timingSafeEqual,
 } from "@/lib/admin-session";
+import { isTeamMember } from "@/lib/team";
 
 export async function loginAdmin(
   name: string,
@@ -19,7 +20,10 @@ export async function loginAdmin(
 
   const trimmedName = name.trim();
   if (!trimmedName) {
-    return { error: "Enter your name." };
+    return { error: "Select your name." };
+  }
+  if (!isTeamMember(trimmedName)) {
+    return { error: "Name not recognized — this tracker is for the Logistics team only." };
   }
 
   if (!pin || !timingSafeEqual(pin, expectedPin)) {
