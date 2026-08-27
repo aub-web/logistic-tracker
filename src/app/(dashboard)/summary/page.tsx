@@ -1,7 +1,12 @@
-import { getDeployedDeviceSummary } from "@/lib/data";
+import { getDeployedDeviceSummary, getBusinessDeviceSummary, BUSINESS_SUMMARY_CATEGORIES } from "@/lib/data";
+import BusinessSummaryTable from "@/components/BusinessSummaryTable";
+import ExportCsvLink from "@/components/ExportCsvLink";
 
 export default async function SummaryPage() {
-  const { categories, totalDeployed } = await getDeployedDeviceSummary();
+  const [{ categories, totalDeployed }, businessRows] = await Promise.all([
+    getDeployedDeviceSummary(),
+    getBusinessDeviceSummary(),
+  ]);
 
   return (
     <div>
@@ -10,7 +15,7 @@ export default async function SummaryPage() {
         Total devices marked Dispatched, grouped by device type.
       </p>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {categories.map((c) => (
           <div key={c.category} className="rounded-xl border border-zinc-200 bg-white p-5">
             <p className="text-sm font-medium text-zinc-500">{c.category}</p>
@@ -22,6 +27,18 @@ export default async function SummaryPage() {
           <p className="mt-2 text-3xl font-semibold text-[#14293D]">{totalDeployed}</p>
         </div>
       </div>
+
+      <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-900">By Business</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Every request ever submitted (any status), broken down by device type per business.
+          </p>
+        </div>
+        <ExportCsvLink href="/api/export/summary" />
+      </div>
+
+      <BusinessSummaryTable rows={businessRows} categories={BUSINESS_SUMMARY_CATEGORIES} />
     </div>
   );
 }
