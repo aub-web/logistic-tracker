@@ -8,7 +8,6 @@ export default function BusinessSummaryTable({ rows }: { rows: BusinessDeviceSum
           <tr>
             <th className="px-4 py-3 font-medium">Business Name</th>
             <th className="px-4 py-3 font-medium">Device Types</th>
-            <th className="px-4 py-3 text-right font-medium">Total Device Qty</th>
             <th className="px-4 py-3 text-right font-medium">Device Requests</th>
             <th className="px-4 py-3 text-right font-medium">SD Cards</th>
           </tr>
@@ -16,7 +15,7 @@ export default function BusinessSummaryTable({ rows }: { rows: BusinessDeviceSum
         <tbody className="divide-y divide-zinc-100">
           {rows.length === 0 && (
             <tr>
-              <td colSpan={5} className="px-4 py-8 text-center text-sm text-zinc-500">
+              <td colSpan={4} className="px-4 py-8 text-center text-sm text-zinc-500">
                 No requests yet.
               </td>
             </tr>
@@ -47,7 +46,6 @@ export default function BusinessSummaryTable({ rows }: { rows: BusinessDeviceSum
                 <td className="px-4 py-3 text-right font-medium text-zinc-900">
                   {row.totalDeviceQty}
                 </td>
-                <td className="px-4 py-3 text-right text-zinc-600">{row.totalDeviceRequests}</td>
                 <td className="px-4 py-3 text-right text-zinc-600">{row.totalSdCards || "—"}</td>
               </tr>
             );

@@ -172,8 +172,8 @@ export async function getDeployedDeviceSummary(): Promise<{
 export interface BusinessDeviceSummaryRow {
   businessName: string;
   categoryCounts: Record<string, number>;
+  /** Total devices requested by this business, across every submission. */
   totalDeviceQty: number;
-  totalDeviceRequests: number;
   totalSdCards: number;
 }
 
@@ -201,7 +201,6 @@ export async function getBusinessDeviceSummary(): Promise<BusinessDeviceSummaryR
         businessName,
         categoryCounts: Object.fromEntries(DEVICE_CATEGORIES.map((c) => [c, 0])),
         totalDeviceQty: 0,
-        totalDeviceRequests: 0,
         totalSdCards: 0,
       };
       rows.set(businessName, row);
@@ -214,7 +213,6 @@ export async function getBusinessDeviceSummary(): Promise<BusinessDeviceSummaryR
     const category = categorize(deviceType);
     row.categoryCounts[category] += quantity;
     row.totalDeviceQty += quantity;
-    row.totalDeviceRequests += 1;
   }
 
   for (const { businessName, sdCardCount } of swapRows) {

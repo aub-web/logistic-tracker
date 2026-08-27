@@ -11,18 +11,11 @@ export async function GET() {
   const rows = await getBusinessDeviceSummary();
 
   const csv = toCsv(
-    [
-      "Business Name",
-      ...BUSINESS_SUMMARY_CATEGORIES,
-      "Total Device Qty",
-      "Device Requests",
-      "SD Cards",
-    ],
+    ["Business Name", ...BUSINESS_SUMMARY_CATEGORIES, "Device Requests", "SD Cards"],
     rows.map((row) => [
       row.businessName,
       ...BUSINESS_SUMMARY_CATEGORIES.map((c) => row.categoryCounts[c] ?? 0),
       row.totalDeviceQty,
-      row.totalDeviceRequests,
       row.totalSdCards,
     ]),
   );
