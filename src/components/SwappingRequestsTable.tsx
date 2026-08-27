@@ -10,9 +10,9 @@ const BUSINESS_TYPE_LABEL: Record<string, string> = {
 
 export default function SwappingRequestsTable({ requests }: { requests: SwappingRequestModel[] }) {
   return (
-    <div className="mt-4 overflow-x-auto rounded-xl border border-zinc-200 bg-white">
+    <div className="mt-4 max-h-[70vh] overflow-auto rounded-xl border border-zinc-200 bg-white">
       <table className="w-full text-left text-sm">
-        <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
+        <thead className="sticky top-0 z-10 border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
           <tr>
             <th className="px-4 py-3 font-medium">Req. ID</th>
             <th className="px-4 py-3 font-medium">Submitted</th>

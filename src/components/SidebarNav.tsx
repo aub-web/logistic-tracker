@@ -100,7 +100,7 @@ export default function SidebarNav({ name }: { name: string }) {
   }
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col bg-[#14293D]">
+    <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col overflow-y-auto bg-[#14293D]">
       <div className="px-5 py-6">
         <p className="text-base font-semibold tracking-tight text-white">
           Atlas Capture

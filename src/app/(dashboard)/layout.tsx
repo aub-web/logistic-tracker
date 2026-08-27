@@ -21,7 +21,7 @@ export default async function DashboardLayout({
   return (
     <div className="flex flex-1">
       <SidebarNav name={session.name} />
-      <main className="min-w-0 flex-1 overflow-x-auto px-4 py-6 sm:px-8">
+      <main className="min-w-0 flex-1 px-4 py-6 sm:px-8">
         <div className="mx-auto w-full max-w-6xl">{children}</div>
       </main>
     </div>
