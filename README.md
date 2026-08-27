@@ -13,10 +13,20 @@ Requests are pulled in from the Google Sheets that sit behind these two forms:
 
 Each has an **all requests** view plus **External Partner** / **Direct
 Business** sub-sections in the sidebar (Outbound-type requests only show up
-in the "all" view). Each request shows a **status** you click to flip
-between **In Progress** (amber) and **Dispatched** (green). A **Summary**
-page totals dispatched devices by type (Mono iPhones / Mono Insta 360 /
-Multicam / Other).
+in the "all" view), a **search box** (business, contact, SDR, or Req. ID),
+and a **status** control — click **In Progress** or **Dispatched** directly
+rather than toggling. Whoever is logged in when they change a status gets
+recorded in the **Updated By** column (the name entered at login — see
+"Identity" below). A **Summary** page totals dispatched devices by type
+(Mono iPhones / Mono Insta 360 / Multicam / Other).
+
+### Identity
+
+Login asks for a name alongside the shared PIN — everyone uses the same
+`ADMIN_PIN`, but the name is what's recorded in `lastChangedBy` when someone
+sets a request's status. It's not a real per-person account (no password,
+no permissions difference), just enough to answer "who marked this
+dispatched" without building full user management.
 
 ### About the existing "Status" column in the Sheets
 
@@ -84,6 +94,21 @@ ever changes (a new tab is added/reordered), open that tab, check the URL for
   `POST /api/sync` every few minutes, with header
   `Authorization: Bearer <SYNC_SECRET>`.
 
+## Deployment
+
+Works on either Netlify or Vercel — both just need the same env vars set in
+their dashboard (everything in `.env.example`) and a build command that runs
+migrations before building, since there's no separate migration step in
+either platform's pipeline:
+
+- **Netlify** — `netlify.toml` is already set up (`prisma migrate deploy &&
+  next build`, `@netlify/plugin-nextjs`).
+- **Vercel** — `vercel.json` sets `framework: nextjs` and the same build
+  command. If a deploy ever fails with `No Output Directory named "public"
+  found`, the project's Framework Preset got set to something other than
+  "Next.js" in Vercel's dashboard (Settings → Build and Development
+  Settings) — switch it back and clear any manual Output Directory override.
+
 ## Project structure
 
 - `src/app/(dashboard)/device-requests/` / `swapping-requests/` — all-requests
@@ -94,7 +119,8 @@ ever changes (a new tab is added/reordered), open that tab, check the URL for
 - `src/lib/google-sheets.ts` — fetches + parses each Sheet's public CSV export.
 - `src/lib/sync.ts` — parses Sheet rows into `DeviceRequest` /
   `SwappingRequest` rows, deduped by the Sheet's own `Request ID` column.
-- `src/lib/actions/request-actions.ts` — server actions: status toggle, sync.
+- `src/lib/actions/request-actions.ts` — server actions: set status (records
+  `lastChangedBy` from the session), sync.
 - `src/lib/admin-session.ts` / `src/lib/admin-auth.ts` — signed, short-lived
   admin session cookie.
 - `src/proxy.ts` — protects the dashboard routes server-side.
