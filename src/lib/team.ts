@@ -13,6 +13,8 @@ export const TEAM_MEMBERS = [
   "Rosa",
   "Bryan",
   "David",
+  "Michael - Sales",
+  "Ram - Sales",
 ] as const;
 
 export type TeamMember = (typeof TEAM_MEMBERS)[number];
