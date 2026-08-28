@@ -23,7 +23,9 @@ export async function GET() {
       "Total Dispatched",
       ...additionalHeaders,
       "Total Additional Request",
-      "Total SD Card",
+      "SD Card",
+      "Total Extra SD Card",
+      "Total Swap Requests",
     ],
     rows.map((row) => [
       row.businessName,
@@ -33,7 +35,9 @@ export async function GET() {
       row.totalDispatchedQty,
       ...BUSINESS_SUMMARY_CATEGORIES.map((c) => row.additionalCategoryCounts[c] ?? 0),
       row.totalAdditionalQty,
-      row.totalSdCards,
+      row.sdCardCount,
+      row.extraSdCards,
+      row.totalSwapRequests,
     ]),
   );
 

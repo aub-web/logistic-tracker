@@ -21,7 +21,9 @@ export default function TrashBusinessTable({
             <th className="px-4 py-3 text-right font-medium">Device Request (Qty)</th>
             <th className="px-4 py-3 text-right font-medium">Total Dispatched</th>
             <th className="px-4 py-3 font-medium">Additional Request Device</th>
-            <th className="px-4 py-3 text-right font-medium">Total SD Card</th>
+            <th className="px-4 py-3 text-right font-medium">SD Card</th>
+            <th className="px-4 py-3 text-right font-medium">Total Extra SD Card</th>
+            <th className="px-4 py-3 text-right font-medium">Total Swap Requests</th>
             <th className="px-4 py-3 font-medium">Deleted By</th>
             <th className="px-4 py-3 font-medium">Deleted At</th>
             <th className="px-4 py-3 font-medium">Actions</th>
@@ -30,7 +32,7 @@ export default function TrashBusinessTable({
         <tbody className="divide-y divide-zinc-100">
           {rows.length === 0 && (
             <tr>
-              <td colSpan={10} className="px-4 py-8 text-center text-sm text-zinc-500">
+              <td colSpan={12} className="px-4 py-8 text-center text-sm text-zinc-500">
                 Trash is empty.
               </td>
             </tr>
@@ -53,7 +55,11 @@ export default function TrashBusinessTable({
               <td className="px-4 py-3 text-zinc-600">
                 <DeviceBadges counts={row.additionalCategoryCounts} />
               </td>
-              <td className="px-4 py-3 text-right text-zinc-600">{row.totalSdCards || "—"}</td>
+              <td className="px-4 py-3 text-right text-zinc-600">{row.sdCardCount || "—"}</td>
+              <td className="px-4 py-3 text-right text-zinc-600">{row.extraSdCards || "—"}</td>
+              <td className="px-4 py-3 text-right text-zinc-600">
+                {row.totalSwapRequests || "—"}
+              </td>
               <td className="whitespace-nowrap px-4 py-3 text-zinc-600">{row.deletedBy}</td>
               <td className="whitespace-nowrap px-4 py-3 text-zinc-600">
                 {row.deletedAt.toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}

@@ -228,6 +228,10 @@ export async function getBusinessLifecycleStatuses(): Promise<Map<string, Busine
   return statuses;
 }
 
+// Only Multicam and Mono Insta 360 actually use an SD card — Mono iPhones
+// record to internal storage and Powerbanks aren't a camera at all.
+const NO_SD_CARD_CATEGORIES = new Set(["Powerbank", "Mono iPhones"]);
+
 export interface BusinessDeviceSummaryRow {
   businessName: string;
   /** Every device requested, by category — the primary DEVICE TYPE field. */
@@ -241,7 +245,14 @@ export interface BusinessDeviceSummaryRow {
    * ADDITIONAL REQUEST), by category. */
   additionalCategoryCounts: Record<string, number>;
   totalAdditionalQty: number;
-  totalSdCards: number;
+  /** One SD card per device unit (primary + additional) that needs one —
+   * swapping just exchanges the same card, it doesn't add to this. */
+  sdCardCount: number;
+  /** Extra SD cards the logistics team has manually tagged for this
+   * business (see ExtraSdCardEntry) — there's no form field for this. */
+  extraSdCards: number;
+  /** How many times they've submitted the Swapping Request form. */
+  totalSwapRequests: number;
 }
 
 export const BUSINESS_SUMMARY_CATEGORIES = DEVICE_CATEGORIES;
@@ -257,27 +268,33 @@ interface DeviceRowForSummary {
 
 interface SwapRowForSummary {
   businessName: string;
-  sdCardCount: number;
+}
+
+function newSummaryRow(businessName: string): BusinessDeviceSummaryRow {
+  return {
+    businessName,
+    categoryCounts: Object.fromEntries(DEVICE_CATEGORIES.map((c) => [c, 0])),
+    totalDeviceQty: 0,
+    totalDispatchedQty: 0,
+    additionalCategoryCounts: Object.fromEntries(DEVICE_CATEGORIES.map((c) => [c, 0])),
+    totalAdditionalQty: 0,
+    sdCardCount: 0,
+    extraSdCards: 0,
+    totalSwapRequests: 0,
+  };
 }
 
 function aggregateBusinessRows(
   deviceRows: DeviceRowForSummary[],
   swapRows: SwapRowForSummary[],
+  extraSdCardTotals: Map<string, number>,
 ): Map<string, BusinessDeviceSummaryRow> {
   const rows = new Map<string, BusinessDeviceSummaryRow>();
 
   function getRow(businessName: string): BusinessDeviceSummaryRow {
     let row = rows.get(businessName);
     if (!row) {
-      row = {
-        businessName,
-        categoryCounts: Object.fromEntries(DEVICE_CATEGORIES.map((c) => [c, 0])),
-        totalDeviceQty: 0,
-        totalDispatchedQty: 0,
-        additionalCategoryCounts: Object.fromEntries(DEVICE_CATEGORIES.map((c) => [c, 0])),
-        totalAdditionalQty: 0,
-        totalSdCards: 0,
-      };
+      row = newSummaryRow(businessName);
       rows.set(businessName, row);
     }
     return row;
@@ -295,6 +312,7 @@ function aggregateBusinessRows(
     const category = categorize(deviceType);
     row.categoryCounts[category] += quantity;
     row.totalDeviceQty += quantity;
+    if (!NO_SD_CARD_CATEGORIES.has(category)) row.sdCardCount += quantity;
 
     // Dispatching a request ships everything on it — the primary quantity
     // and any additional-request units together.
@@ -304,12 +322,17 @@ function aggregateBusinessRows(
       const additionalCategory = categorize(additionalRequestDeviceType);
       row.additionalCategoryCounts[additionalCategory] += additionalRequestQuantity;
       row.totalAdditionalQty += additionalRequestQuantity;
+      if (!NO_SD_CARD_CATEGORIES.has(additionalCategory)) row.sdCardCount += additionalRequestQuantity;
       if (status === "DISPATCHED") row.totalDispatchedQty += additionalRequestQuantity;
     }
   }
 
-  for (const { businessName, sdCardCount } of swapRows) {
-    getRow(businessName).totalSdCards += sdCardCount;
+  for (const { businessName } of swapRows) {
+    getRow(businessName).totalSwapRequests += 1;
+  }
+
+  for (const [businessName, extra] of extraSdCardTotals) {
+    getRow(businessName).extraSdCards += extra;
   }
 
   return rows;
@@ -324,25 +347,40 @@ const SUMMARY_SELECT = {
   additionalRequestQuantity: true,
 } as const;
 
+/** Extra SD cards tagged per business, summed across every tagging event. */
+async function getExtraSdCardTotals(businessNames?: string[]): Promise<Map<string, number>> {
+  const entries = await prisma.extraSdCardEntry.findMany({
+    where: businessNames ? { businessName: { in: businessNames } } : undefined,
+    select: { businessName: true, quantity: true },
+  });
+  const totals = new Map<string, number>();
+  for (const { businessName, quantity } of entries) {
+    totals.set(businessName, (totals.get(businessName) ?? 0) + quantity);
+  }
+  return totals;
+}
+
 /** Per-business breakdown of everything ever requested — device quantities
- * by category plus SD cards swapped — across all requests regardless of
- * status (this counts total demand, not just what's been dispatched).
- * Deleted businesses are excluded — see getTrashedBusinessSummary. */
+ * by category, SD card demand, and swap activity — across all requests
+ * regardless of status (this counts total demand, not just what's been
+ * dispatched). Deleted businesses are excluded — see
+ * getTrashedBusinessSummary. */
 export async function getBusinessDeviceSummary(): Promise<BusinessDeviceSummaryRow[]> {
   const notDeleted = excludeBusinessNames(await getDeletedBusinessNames());
 
-  const [deviceRows, swapRows] = await Promise.all([
+  const [deviceRows, swapRows, extraSdCardTotals] = await Promise.all([
     prisma.deviceRequest.findMany({
       where: notDeleted ? { businessName: notDeleted } : undefined,
       select: SUMMARY_SELECT,
     }),
     prisma.swappingRequest.findMany({
       where: notDeleted ? { businessName: notDeleted } : undefined,
-      select: { businessName: true, sdCardCount: true },
+      select: { businessName: true },
     }),
+    getExtraSdCardTotals(),
   ]);
 
-  const rows = aggregateBusinessRows(deviceRows, swapRows);
+  const rows = aggregateBusinessRows(deviceRows, swapRows, extraSdCardTotals);
   return Array.from(rows.values()).sort((a, b) => a.businessName.localeCompare(b.businessName));
 }
 
@@ -363,33 +401,24 @@ export async function getTrashedBusinessSummary(): Promise<TrashedBusinessRow[]>
   const deletedNames = deleted.map((d) => d.name);
   const deletedInfo = new Map(deleted.map((d) => [d.name, d]));
 
-  const [deviceRows, swapRows] = await Promise.all([
+  const [deviceRows, swapRows, extraSdCardTotals] = await Promise.all([
     prisma.deviceRequest.findMany({
       where: { businessName: { in: deletedNames } },
       select: SUMMARY_SELECT,
     }),
     prisma.swappingRequest.findMany({
       where: { businessName: { in: deletedNames } },
-      select: { businessName: true, sdCardCount: true },
+      select: { businessName: true },
     }),
+    getExtraSdCardTotals(deletedNames),
   ]);
 
-  const rows = aggregateBusinessRows(deviceRows, swapRows);
+  const rows = aggregateBusinessRows(deviceRows, swapRows, extraSdCardTotals);
 
   // A business can be in Trash with no requests under its exact name
   // spelling (e.g. deleted preemptively) — still show it.
   for (const name of deletedNames) {
-    if (!rows.has(name)) {
-      rows.set(name, {
-        businessName: name,
-        categoryCounts: Object.fromEntries(DEVICE_CATEGORIES.map((c) => [c, 0])),
-        totalDeviceQty: 0,
-        totalDispatchedQty: 0,
-        additionalCategoryCounts: Object.fromEntries(DEVICE_CATEGORIES.map((c) => [c, 0])),
-        totalAdditionalQty: 0,
-        totalSdCards: 0,
-      });
-    }
+    if (!rows.has(name)) rows.set(name, newSummaryRow(name));
   }
 
   return Array.from(rows.values())

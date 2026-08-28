@@ -40,3 +40,21 @@ export async function restoreBusiness(businessName: string): Promise<void> {
 
   revalidateAll();
 }
+
+/** Tags extra SD cards handed out for a business beyond the normal
+ * one-per-device allocation — there's no form field for this, so it's
+ * recorded directly here. Each call adds a new dated entry rather than
+ * overwriting a running total, so who tagged what stays auditable. */
+export async function addExtraSdCards(businessName: string, quantity: number): Promise<void> {
+  const taggedBy = await requireAdminName();
+
+  if (!Number.isInteger(quantity) || quantity <= 0) {
+    throw new Error("Quantity must be a positive whole number.");
+  }
+
+  await prisma.extraSdCardEntry.create({
+    data: { businessName, quantity, taggedBy },
+  });
+
+  revalidateAll();
+}

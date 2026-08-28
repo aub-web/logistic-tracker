@@ -99,6 +99,22 @@ model Business {
   @@index([deletedAt])
 }
 
+// Manual record of extra SD cards the logistics team hands out for a
+// business beyond the normal one-per-device allocation — there's no form
+// field for this, so it's tagged directly in the tracker. Each row is one
+// tagging event (not a running total), so who/when is preserved per entry;
+// the total shown per business is the sum of these.
+model ExtraSdCardEntry {
+  id String @id @default(cuid())
+
+  businessName String
+  quantity     Int
+  taggedBy     String
+  taggedAt     DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([businessName])
+}
+
 model SwappingRequest {
   id String @id @default(cuid())
 
