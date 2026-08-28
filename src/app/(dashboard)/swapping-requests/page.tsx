@@ -1,4 +1,4 @@
-import { listSwappingRequests, listSwappingRequestSdrNames } from "@/lib/data";
+import { listSwappingRequests, listSwappingRequestSdrNames, getBusinessLifecycleStatuses } from "@/lib/data";
 import { buildFilterQueryString } from "@/lib/filter-query";
 import SwappingRequestsTable from "@/components/SwappingRequestsTable";
 import SyncButton from "@/components/SyncButton";
@@ -11,9 +11,10 @@ export default async function SwappingRequestsPage({
   searchParams: Promise<{ q?: string; sdr?: string; from?: string; to?: string }>;
 }) {
   const { q, sdr, from, to } = await searchParams;
-  const [requests, sdrOptions] = await Promise.all([
+  const [requests, sdrOptions, statuses] = await Promise.all([
     listSwappingRequests({ query: q, sdrName: sdr, dateFrom: from, dateTo: to }),
     listSwappingRequestSdrNames(),
+    getBusinessLifecycleStatuses(),
   ]);
 
   const exportHref = `/api/export/swapping-requests${buildFilterQueryString({ q, sdr, from, to })}`;
@@ -42,7 +43,7 @@ export default async function SwappingRequestsPage({
         basePath="/swapping-requests"
       />
 
-      <SwappingRequestsTable requests={requests} />
+      <SwappingRequestsTable requests={requests} statuses={statuses} />
     </div>
   );
 }

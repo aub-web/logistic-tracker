@@ -1,6 +1,8 @@
 import { setDeviceRequestStatus } from "@/lib/actions/request-actions";
 import StatusToggleButton from "@/components/StatusToggleButton";
+import BusinessStatusBadge from "@/components/BusinessStatusBadge";
 import type { DeviceRequestModel } from "@/generated/prisma/models";
+import type { BusinessLifecycleStatus } from "@/lib/data";
 
 const REQUEST_TYPE_LABEL: Record<string, string> = {
   DROP_OFF: "Drop-off",
@@ -14,7 +16,13 @@ const BUSINESS_TYPE_LABEL: Record<string, string> = {
   OUTBOUND: "Outbound",
 };
 
-export default function DeviceRequestsTable({ requests }: { requests: DeviceRequestModel[] }) {
+export default function DeviceRequestsTable({
+  requests,
+  statuses,
+}: {
+  requests: DeviceRequestModel[];
+  statuses: Map<string, BusinessLifecycleStatus>;
+}) {
   return (
     <div className="mt-4 max-h-[70vh] overflow-auto rounded-xl border border-zinc-200 bg-white">
       <table className="w-full text-left text-sm">
@@ -58,8 +66,9 @@ export default function DeviceRequestsTable({ requests }: { requests: DeviceRequ
               </td>
               <td className="px-4 py-3">
                 <div className="font-medium text-zinc-900">{r.businessName}</div>
-                <div className="text-xs text-zinc-500">
+                <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
                   {BUSINESS_TYPE_LABEL[r.businessType] ?? r.businessType}
+                  <BusinessStatusBadge status={statuses.get(r.businessName)} />
                 </div>
               </td>
               <td className="px-4 py-3 text-zinc-600">

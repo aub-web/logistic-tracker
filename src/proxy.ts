@@ -33,6 +33,7 @@ export const config = {
     "/device-requests/:path*",
     "/swapping-requests/:path*",
     "/summary",
+    "/trash",
     "/login",
   ],
 };

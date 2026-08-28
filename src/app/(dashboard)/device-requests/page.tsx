@@ -1,4 +1,9 @@
-import { listDeviceRequests, listDeviceRequestSdrNames, listDeviceRequestDeviceTypes } from "@/lib/data";
+import {
+  listDeviceRequests,
+  listDeviceRequestSdrNames,
+  listDeviceRequestDeviceTypes,
+  getBusinessLifecycleStatuses,
+} from "@/lib/data";
 import { buildFilterQueryString } from "@/lib/filter-query";
 import DeviceRequestsTable from "@/components/DeviceRequestsTable";
 import SyncButton from "@/components/SyncButton";
@@ -11,10 +16,11 @@ export default async function DeviceRequestsPage({
   searchParams: Promise<{ q?: string; sdr?: string; device?: string; from?: string; to?: string }>;
 }) {
   const { q, sdr, device, from, to } = await searchParams;
-  const [requests, sdrOptions, deviceOptions] = await Promise.all([
+  const [requests, sdrOptions, deviceOptions, statuses] = await Promise.all([
     listDeviceRequests({ query: q, sdrName: sdr, deviceType: device, dateFrom: from, dateTo: to }),
     listDeviceRequestSdrNames(),
     listDeviceRequestDeviceTypes(),
+    getBusinessLifecycleStatuses(),
   ]);
 
   const exportHref = `/api/export/device-requests${buildFilterQueryString({ q, sdr, device, from, to })}`;
@@ -45,7 +51,7 @@ export default async function DeviceRequestsPage({
         basePath="/device-requests"
       />
 
-      <DeviceRequestsTable requests={requests} />
+      <DeviceRequestsTable requests={requests} statuses={statuses} />
     </div>
   );
 }

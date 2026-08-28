@@ -40,6 +40,25 @@ SD card, **except Powerbanks** — the Summary table shows this as an
 "Expected" SD card count next to the actual number swapped (from the
 Swapping Request form), so a gap between the two is visible at a glance.
 
+### Business status (Active / Pulled Out)
+
+Every request row, plus the Summary and Trash tables, shows a small status
+badge per business: **Pulled Out** if that business's most recent Device
+Request is a Pull-out, **Active** otherwise. It's fully derived from
+existing data (`getBusinessLifecycleStatuses` in `src/lib/data.ts`) — there's
+no separate field to set, so it updates automatically as new requests come
+in.
+
+### Trash
+
+Delete a business from its **Delete** button on the Summary table — it
+moves to **Trash** and disappears from Device Request, Swapping Request,
+Summary, their filters, and CSV exports, everywhere, until someone hits
+**Restore**. Nothing is actually deleted: a `Business` row (name +
+who + when) is the only thing created, and every list query excludes
+businesses with one. Trash shows the same per-business breakdown as
+Summary, plus **Deleted By** / **Deleted At**.
+
 ### Identity
 
 Login picks a name from a fixed roster (`src/lib/team.ts`) alongside the
@@ -136,6 +155,9 @@ either platform's pipeline:
 - `src/app/(dashboard)/device-requests/` / `swapping-requests/` — all-requests
   views, plus `direct-business/` and `external-partner/` sub-views.
 - `src/app/(dashboard)/summary/` — deployed-devices summary.
+- `src/app/(dashboard)/trash/` — deleted businesses, restorable.
+- `src/lib/actions/business-actions.ts` — server actions: delete/restore a
+  business (writes/removes a `Business` row).
 - `src/components/DeviceRequestsTable.tsx` / `SwappingRequestsTable.tsx` —
   shared table markup used by both the "all" and filtered pages.
 - `src/lib/google-sheets.ts` — fetches + parses each Sheet's public CSV export.

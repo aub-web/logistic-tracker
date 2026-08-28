@@ -42,6 +42,21 @@ function ChartIcon() {
   );
 }
 
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <path
+        d="M4 5.5h12M8 5.5V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1.5M6 5.5v10a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-10"
+        stroke="white"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M8.5 8.5v5M11.5 8.5v5" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function ChevronIcon({ open }: { open: boolean }) {
   return (
     <svg
@@ -180,6 +195,20 @@ export default function SidebarNav({ name }: { name: string }) {
             <ChartIcon />
           </span>
           Summary
+        </Link>
+
+        <Link
+          href="/trash"
+          className={`flex items-center gap-3 rounded-lg border-l-2 py-2 pl-2.5 pr-3 text-sm font-medium transition ${
+            pathname === "/trash"
+              ? "border-emerald-400 bg-white/10 text-white"
+              : "border-transparent text-white/70 hover:bg-white/5 hover:text-white"
+          }`}
+        >
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-500">
+            <TrashIcon />
+          </span>
+          Trash
         </Link>
       </nav>
 

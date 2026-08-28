@@ -1,11 +1,12 @@
-import { getDeployedDeviceSummary, getBusinessDeviceSummary } from "@/lib/data";
+import { getDeployedDeviceSummary, getBusinessDeviceSummary, getBusinessLifecycleStatuses } from "@/lib/data";
 import BusinessSummaryTable from "@/components/BusinessSummaryTable";
 import ExportCsvLink from "@/components/ExportCsvLink";
 
 export default async function SummaryPage() {
-  const [{ categories, totalDeployed }, businessRows] = await Promise.all([
+  const [{ categories, totalDeployed }, businessRows, statuses] = await Promise.all([
     getDeployedDeviceSummary(),
     getBusinessDeviceSummary(),
+    getBusinessLifecycleStatuses(),
   ]);
 
   return (
@@ -38,7 +39,7 @@ export default async function SummaryPage() {
         <ExportCsvLink href="/api/export/summary" />
       </div>
 
-      <BusinessSummaryTable rows={businessRows} />
+      <BusinessSummaryTable rows={businessRows} statuses={statuses} />
     </div>
   );
 }

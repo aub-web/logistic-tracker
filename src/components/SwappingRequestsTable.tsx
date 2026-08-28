@@ -1,6 +1,8 @@
 import { setSwappingRequestStatus } from "@/lib/actions/request-actions";
 import StatusToggleButton from "@/components/StatusToggleButton";
+import BusinessStatusBadge from "@/components/BusinessStatusBadge";
 import type { SwappingRequestModel } from "@/generated/prisma/models";
+import type { BusinessLifecycleStatus } from "@/lib/data";
 
 const BUSINESS_TYPE_LABEL: Record<string, string> = {
   DIRECT_BUSINESS: "Direct Business",
@@ -8,7 +10,13 @@ const BUSINESS_TYPE_LABEL: Record<string, string> = {
   OUTBOUND: "Outbound",
 };
 
-export default function SwappingRequestsTable({ requests }: { requests: SwappingRequestModel[] }) {
+export default function SwappingRequestsTable({
+  requests,
+  statuses,
+}: {
+  requests: SwappingRequestModel[];
+  statuses: Map<string, BusinessLifecycleStatus>;
+}) {
   return (
     <div className="mt-4 max-h-[70vh] overflow-auto rounded-xl border border-zinc-200 bg-white">
       <table className="w-full text-left text-sm">
@@ -46,8 +54,9 @@ export default function SwappingRequestsTable({ requests }: { requests: Swapping
               </td>
               <td className="px-4 py-3">
                 <div className="font-medium text-zinc-900">{r.businessName}</div>
-                <div className="text-xs text-zinc-500">
+                <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
                   {BUSINESS_TYPE_LABEL[r.businessType] ?? r.businessType}
+                  <BusinessStatusBadge status={statuses.get(r.businessName)} />
                 </div>
               </td>
               <td className="px-4 py-3 text-zinc-600">

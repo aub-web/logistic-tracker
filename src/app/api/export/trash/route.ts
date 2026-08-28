@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { getBusinessDeviceSummary, getBusinessLifecycleStatuses, BUSINESS_SUMMARY_CATEGORIES } from "@/lib/data";
+import { getTrashedBusinessSummary, getBusinessLifecycleStatuses, BUSINESS_SUMMARY_CATEGORIES } from "@/lib/data";
 import { toCsv } from "@/lib/csv";
 
 export async function GET() {
@@ -9,7 +9,7 @@ export async function GET() {
   }
 
   const [rows, statuses] = await Promise.all([
-    getBusinessDeviceSummary(),
+    getTrashedBusinessSummary(),
     getBusinessLifecycleStatuses(),
   ]);
   const additionalHeaders = BUSINESS_SUMMARY_CATEGORIES.map((c) => `Additional: ${c}`);
@@ -25,6 +25,8 @@ export async function GET() {
       "Total Additional Request",
       "SD Cards Swapped",
       "SD Cards Expected",
+      "Deleted By",
+      "Deleted At",
     ],
     rows.map((row) => [
       row.businessName,
@@ -36,13 +38,15 @@ export async function GET() {
       row.totalAdditionalQty,
       row.totalSdCards,
       row.expectedSdCards,
+      row.deletedBy,
+      row.deletedAt.toISOString(),
     ]),
   );
 
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="business-summary-${Date.now()}.csv"`,
+      "Content-Disposition": `attachment; filename="trash-${Date.now()}.csv"`,
     },
   });
 }

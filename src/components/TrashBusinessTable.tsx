@@ -1,13 +1,13 @@
-import type { BusinessDeviceSummaryRow, BusinessLifecycleStatus } from "@/lib/data";
+import type { TrashedBusinessRow, BusinessLifecycleStatus } from "@/lib/data";
 import DeviceBadges from "@/components/DeviceBadges";
 import BusinessStatusBadge from "@/components/BusinessStatusBadge";
-import DeleteBusinessButton from "@/components/DeleteBusinessButton";
+import RestoreBusinessButton from "@/components/RestoreBusinessButton";
 
-export default function BusinessSummaryTable({
+export default function TrashBusinessTable({
   rows,
   statuses,
 }: {
-  rows: BusinessDeviceSummaryRow[];
+  rows: TrashedBusinessRow[];
   statuses: Map<string, BusinessLifecycleStatus>;
 }) {
   return (
@@ -22,14 +22,16 @@ export default function BusinessSummaryTable({
             <th className="px-4 py-3 text-right font-medium">Total Dispatched</th>
             <th className="px-4 py-3 font-medium">Additional Request Device</th>
             <th className="px-4 py-3 text-right font-medium">SD Cards (Swapped / Expected)</th>
+            <th className="px-4 py-3 font-medium">Deleted By</th>
+            <th className="px-4 py-3 font-medium">Deleted At</th>
             <th className="px-4 py-3 font-medium">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-100">
           {rows.length === 0 && (
             <tr>
-              <td colSpan={8} className="px-4 py-8 text-center text-sm text-zinc-500">
-                No requests yet.
+              <td colSpan={10} className="px-4 py-8 text-center text-sm text-zinc-500">
+                Trash is empty.
               </td>
             </tr>
           )}
@@ -69,8 +71,12 @@ export default function BusinessSummaryTable({
                   </>
                 )}
               </td>
+              <td className="whitespace-nowrap px-4 py-3 text-zinc-600">{row.deletedBy}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-zinc-600">
+                {row.deletedAt.toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}
+              </td>
               <td className="px-4 py-3">
-                <DeleteBusinessButton businessName={row.businessName} />
+                <RestoreBusinessButton businessName={row.businessName} />
               </td>
             </tr>
           ))}

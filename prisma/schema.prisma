@@ -83,6 +83,22 @@ model DeviceRequest {
   @@index([status])
 }
 
+// A row here means that business is in the Trash — hidden from every
+// request table, filter, and Summary. Presence in this table IS the
+// "deleted" state (there's no separate soft-delete flag); restoring just
+// deletes the row. Deliberately not tied to DeviceRequest/SwappingRequest by
+// foreign key, since businesses there are matched by exact name string, not
+// an id.
+model Business {
+  id String @id @default(cuid())
+
+  name      String   @unique
+  deletedAt DateTime @default(now()) @db.Timestamptz(3)
+  deletedBy String
+
+  @@index([deletedAt])
+}
+
 model SwappingRequest {
   id String @id @default(cuid())
 
