@@ -18,6 +18,13 @@ const SWAPPING_REQUEST_PATHS = [
   "/swapping-requests/external-partner",
 ];
 
+const SUMMARY_PATHS = [
+  "/summary",
+  "/summary/direct-business",
+  "/summary/external-partner",
+  "/pulled-out",
+];
+
 export async function setDeviceRequestStatus(
   id: string,
   status: RequestStatus,
@@ -34,7 +41,7 @@ export async function setDeviceRequestStatus(
   });
 
   for (const path of DEVICE_REQUEST_PATHS) revalidatePath(path);
-  revalidatePath("/summary");
+  for (const path of SUMMARY_PATHS) revalidatePath(path);
 }
 
 export async function setSwappingRequestStatus(
@@ -53,6 +60,7 @@ export async function setSwappingRequestStatus(
   });
 
   for (const path of SWAPPING_REQUEST_PATHS) revalidatePath(path);
+  for (const path of SUMMARY_PATHS) revalidatePath(path);
 }
 
 export async function runSync(): Promise<{
@@ -66,8 +74,9 @@ export async function runSync(): Promise<{
     syncSwappingRequests(),
   ]);
 
-  for (const path of [...DEVICE_REQUEST_PATHS, ...SWAPPING_REQUEST_PATHS]) revalidatePath(path);
-  revalidatePath("/summary");
+  for (const path of [...DEVICE_REQUEST_PATHS, ...SWAPPING_REQUEST_PATHS, ...SUMMARY_PATHS]) {
+    revalidatePath(path);
+  }
 
   return { deviceCreated: device.created, swappingCreated: swapping.created };
 }

@@ -12,6 +12,9 @@ const PATHS_TO_REVALIDATE = [
   "/swapping-requests/direct-business",
   "/swapping-requests/external-partner",
   "/summary",
+  "/summary/direct-business",
+  "/summary/external-partner",
+  "/pulled-out",
   "/trash",
 ];
 

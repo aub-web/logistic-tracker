@@ -1,14 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
-import { getBusinessDeviceSummary, getBusinessLifecycleStatuses, BUSINESS_SUMMARY_CATEGORIES } from "@/lib/data";
+import { getPulledOutBusinessSummary, BUSINESS_SUMMARY_CATEGORIES } from "@/lib/data";
 import { toCsv } from "@/lib/csv";
-import type { BusinessType } from "@/generated/prisma/enums";
-
-function parseBusinessType(value: string | null): BusinessType | undefined {
-  return value === "DIRECT_BUSINESS" || value === "EXTERNAL_PARTNER" || value === "OUTBOUND"
-    ? value
-    : undefined;
-}
 
 export async function GET(request: Request) {
   if (!(await isAdminAuthenticated())) {
@@ -16,18 +9,12 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const businessType = parseBusinessType(searchParams.get("businessType"));
-
-  const [rows, statuses] = await Promise.all([
-    getBusinessDeviceSummary(businessType),
-    getBusinessLifecycleStatuses(),
-  ]);
+  const rows = await getPulledOutBusinessSummary(searchParams.get("q") ?? undefined);
   const additionalHeaders = BUSINESS_SUMMARY_CATEGORIES.map((c) => `Additional: ${c}`);
 
   const csv = toCsv(
     [
       "Business Name",
-      "Status",
       ...BUSINESS_SUMMARY_CATEGORIES,
       "Device Request (Qty)",
       "Total Dispatched",
@@ -39,7 +26,6 @@ export async function GET(request: Request) {
     ],
     rows.map((row) => [
       row.businessName,
-      statuses.get(row.businessName) === "PULLED_OUT" ? "Pulled Out" : "Active",
       ...BUSINESS_SUMMARY_CATEGORIES.map((c) => row.categoryCounts[c] ?? 0),
       row.totalDeviceQty,
       row.totalDispatchedQty,
@@ -54,7 +40,7 @@ export async function GET(request: Request) {
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="business-summary-${Date.now()}.csv"`,
+      "Content-Disposition": `attachment; filename="pulled-out-${Date.now()}.csv"`,
     },
   });
 }

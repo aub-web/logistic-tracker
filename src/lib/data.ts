@@ -8,6 +8,23 @@ async function getDeletedBusinessNames(): Promise<string[]> {
   return rows.map((r) => r.name);
 }
 
+async function getPulledOutBusinessNames(): Promise<string[]> {
+  const statuses = await getBusinessLifecycleStatuses();
+  return [...statuses.entries()].filter(([, s]) => s === "PULLED_OUT").map(([name]) => name);
+}
+
+/** Deleted (Trash) + Pulled Out business names — the set hidden from every
+ * "normal" view (Device Request, Swapping Request, Summary). A Pulled Out
+ * business only shows up in its own dedicated section, same idea as Trash;
+ * a business that's both stays in Trash only. */
+async function getExcludedBusinessNames(): Promise<string[]> {
+  const [deleted, pulledOut] = await Promise.all([
+    getDeletedBusinessNames(),
+    getPulledOutBusinessNames(),
+  ]);
+  return [...new Set([...deleted, ...pulledOut])];
+}
+
 function excludeBusinessNames(names: string[]): { notIn: string[] } | undefined {
   return names.length > 0 ? { notIn: names } : undefined;
 }
@@ -75,7 +92,7 @@ export async function listDeviceRequests(filters: DeviceRequestFilters = {}) {
   const { businessType, query, sdrName, deviceType, dateFrom, dateTo } = filters;
   const q = query?.trim();
   const submittedAt = dateRangeFilter(dateFrom, dateTo);
-  const notDeleted = excludeBusinessNames(await getDeletedBusinessNames());
+  const visibleFilter = excludeBusinessNames(await getExcludedBusinessNames());
 
   return prisma.deviceRequest.findMany({
     where: {
@@ -83,7 +100,7 @@ export async function listDeviceRequests(filters: DeviceRequestFilters = {}) {
       ...(sdrName ? { sdrName } : {}),
       ...(deviceType ? { deviceType } : {}),
       ...(submittedAt ? { submittedAt } : {}),
-      ...(notDeleted ? { businessName: notDeleted } : {}),
+      ...(visibleFilter ? { businessName: visibleFilter } : {}),
       ...(q ? deviceSearchFilter(q) : {}),
     },
     orderBy: { submittedAt: "desc" },
@@ -102,14 +119,14 @@ export async function listSwappingRequests(filters: SwappingRequestFilters = {})
   const { businessType, query, sdrName, dateFrom, dateTo } = filters;
   const q = query?.trim();
   const submittedAt = dateRangeFilter(dateFrom, dateTo);
-  const notDeleted = excludeBusinessNames(await getDeletedBusinessNames());
+  const visibleFilter = excludeBusinessNames(await getExcludedBusinessNames());
 
   return prisma.swappingRequest.findMany({
     where: {
       ...(businessType ? { businessType } : {}),
       ...(sdrName ? { sdrName } : {}),
       ...(submittedAt ? { submittedAt } : {}),
-      ...(notDeleted ? { businessName: notDeleted } : {}),
+      ...(visibleFilter ? { businessName: visibleFilter } : {}),
       ...(q ? swappingSearchFilter(q) : {}),
     },
     orderBy: { submittedAt: "desc" },
@@ -123,27 +140,27 @@ function nonEmptySorted(values: string[]): string[] {
 }
 
 export async function listDeviceRequestSdrNames(): Promise<string[]> {
-  const notDeleted = excludeBusinessNames(await getDeletedBusinessNames());
+  const visibleFilter = excludeBusinessNames(await getExcludedBusinessNames());
   const rows = await prisma.deviceRequest.findMany({
-    where: notDeleted ? { businessName: notDeleted } : undefined,
+    where: visibleFilter ? { businessName: visibleFilter } : undefined,
     select: { sdrName: true },
   });
   return nonEmptySorted(rows.map((r) => r.sdrName));
 }
 
 export async function listDeviceRequestDeviceTypes(): Promise<string[]> {
-  const notDeleted = excludeBusinessNames(await getDeletedBusinessNames());
+  const visibleFilter = excludeBusinessNames(await getExcludedBusinessNames());
   const rows = await prisma.deviceRequest.findMany({
-    where: notDeleted ? { businessName: notDeleted } : undefined,
+    where: visibleFilter ? { businessName: visibleFilter } : undefined,
     select: { deviceType: true },
   });
   return nonEmptySorted(rows.map((r) => r.deviceType));
 }
 
 export async function listSwappingRequestSdrNames(): Promise<string[]> {
-  const notDeleted = excludeBusinessNames(await getDeletedBusinessNames());
+  const visibleFilter = excludeBusinessNames(await getExcludedBusinessNames());
   const rows = await prisma.swappingRequest.findMany({
-    where: notDeleted ? { businessName: notDeleted } : undefined,
+    where: visibleFilter ? { businessName: visibleFilter } : undefined,
     select: { sdrName: true },
   });
   return nonEmptySorted(rows.map((r) => r.sdrName));
@@ -175,13 +192,17 @@ function categorize(deviceType: string): string {
  * counts both the primary request and any additional-request units on the
  * same submission, since both ship together once marked Dispatched.
  * Excludes deleted businesses, same as everywhere else. */
-export async function getDeployedDeviceSummary(): Promise<{
+export async function getDeployedDeviceSummary(businessType?: BusinessType): Promise<{
   categories: DeviceCategorySummary[];
   totalDeployed: number;
 }> {
-  const notDeleted = excludeBusinessNames(await getDeletedBusinessNames());
+  const visibleFilter = excludeBusinessNames(await getExcludedBusinessNames());
   const dispatched = await prisma.deviceRequest.findMany({
-    where: { status: "DISPATCHED", ...(notDeleted ? { businessName: notDeleted } : {}) },
+    where: {
+      status: "DISPATCHED",
+      ...(businessType ? { businessType } : {}),
+      ...(visibleFilter ? { businessName: visibleFilter } : {}),
+    },
     select: {
       deviceType: true,
       quantity: true,
@@ -365,20 +386,30 @@ async function getExtraSdCardTotals(businessNames?: string[]): Promise<Map<strin
  * regardless of status (this counts total demand, not just what's been
  * dispatched). Deleted businesses are excluded — see
  * getTrashedBusinessSummary. */
-export async function getBusinessDeviceSummary(): Promise<BusinessDeviceSummaryRow[]> {
-  const notDeleted = excludeBusinessNames(await getDeletedBusinessNames());
+export async function getBusinessDeviceSummary(
+  businessType?: BusinessType,
+): Promise<BusinessDeviceSummaryRow[]> {
+  const visibleFilter = excludeBusinessNames(await getExcludedBusinessNames());
 
-  const [deviceRows, swapRows, extraSdCardTotals] = await Promise.all([
+  const [deviceRows, swapRows] = await Promise.all([
     prisma.deviceRequest.findMany({
-      where: notDeleted ? { businessName: notDeleted } : undefined,
+      where: {
+        ...(businessType ? { businessType } : {}),
+        ...(visibleFilter ? { businessName: visibleFilter } : {}),
+      },
       select: SUMMARY_SELECT,
     }),
     prisma.swappingRequest.findMany({
-      where: notDeleted ? { businessName: notDeleted } : undefined,
+      where: {
+        ...(businessType ? { businessType } : {}),
+        ...(visibleFilter ? { businessName: visibleFilter } : {}),
+      },
       select: { businessName: true },
     }),
-    getExtraSdCardTotals(),
   ]);
+
+  const businessNames = [...new Set([...deviceRows, ...swapRows].map((r) => r.businessName))];
+  const extraSdCardTotals = await getExtraSdCardTotals(businessNames);
 
   const rows = aggregateBusinessRows(deviceRows, swapRows, extraSdCardTotals);
   return Array.from(rows.values()).sort((a, b) => a.businessName.localeCompare(b.businessName));
@@ -427,4 +458,43 @@ export async function getTrashedBusinessSummary(): Promise<TrashedBusinessRow[]>
       return { ...row, deletedBy: info.deletedBy, deletedAt: info.deletedAt };
     })
     .sort((a, b) => b.deletedAt.getTime() - a.deletedAt.getTime());
+}
+
+/** Same per-business breakdown, for businesses whose most recent Device
+ * Request is a Pull-out — auto-detected, not manually tagged. These are
+ * hidden from Device Request, Swapping Request, and Summary (same as
+ * Trash), and only show up here, unless also in Trash (Trash wins). */
+export async function getPulledOutBusinessSummary(query?: string): Promise<BusinessDeviceSummaryRow[]> {
+  const [deletedNames, statuses] = await Promise.all([
+    getDeletedBusinessNames(),
+    getBusinessLifecycleStatuses(),
+  ]);
+  const deletedSet = new Set(deletedNames);
+  const q = query?.trim().toLowerCase();
+
+  const pulledOutNames = [...statuses.entries()]
+    .filter(([name, status]) => status === "PULLED_OUT" && !deletedSet.has(name))
+    .map(([name]) => name)
+    .filter((name) => !q || name.toLowerCase().includes(q));
+
+  if (pulledOutNames.length === 0) return [];
+
+  const [deviceRows, swapRows, extraSdCardTotals] = await Promise.all([
+    prisma.deviceRequest.findMany({
+      where: { businessName: { in: pulledOutNames } },
+      select: SUMMARY_SELECT,
+    }),
+    prisma.swappingRequest.findMany({
+      where: { businessName: { in: pulledOutNames } },
+      select: { businessName: true },
+    }),
+    getExtraSdCardTotals(pulledOutNames),
+  ]);
+
+  const rows = aggregateBusinessRows(deviceRows, swapRows, extraSdCardTotals);
+  for (const name of pulledOutNames) {
+    if (!rows.has(name)) rows.set(name, newSummaryRow(name));
+  }
+
+  return Array.from(rows.values()).sort((a, b) => a.businessName.localeCompare(b.businessName));
 }

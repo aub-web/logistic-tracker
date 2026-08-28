@@ -42,6 +42,20 @@ function ChartIcon() {
   );
 }
 
+function PulledOutIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+      <path
+        d="M12.5 6.5 16 10l-3.5 3.5M16 10H7.5M9 4H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h4"
+        stroke="white"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function TrashIcon() {
   return (
     <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
@@ -88,6 +102,16 @@ const NAV_SECTIONS = [
     children: [
       { href: "/swapping-requests/external-partner", label: "External Partner" },
       { href: "/swapping-requests/direct-business", label: "Direct Business" },
+    ],
+  },
+  {
+    href: "/summary",
+    label: "Summary",
+    color: "bg-emerald-500",
+    icon: ChartIcon,
+    children: [
+      { href: "/summary/external-partner", label: "External Partner" },
+      { href: "/summary/direct-business", label: "Direct Business" },
     ],
   },
 ];
@@ -184,17 +208,17 @@ export default function SidebarNav({ name }: { name: string }) {
         })}
 
         <Link
-          href="/summary"
+          href="/pulled-out"
           className={`flex items-center gap-3 rounded-lg border-l-2 py-2 pl-2.5 pr-3 text-sm font-medium transition ${
-            pathname === "/summary"
+            pathname === "/pulled-out"
               ? "border-emerald-400 bg-white/10 text-white"
               : "border-transparent text-white/70 hover:bg-white/5 hover:text-white"
           }`}
         >
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-emerald-500">
-            <ChartIcon />
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-red-500">
+            <PulledOutIcon />
           </span>
-          Summary
+          Pulled Out
         </Link>
 
         <Link
