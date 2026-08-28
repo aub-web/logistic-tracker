@@ -30,13 +30,14 @@ export default function SwappingRequestsTable({
             <th className="px-4 py-3 font-medium">SD Cards</th>
             <th className="px-4 py-3 font-medium">SDR / SS</th>
             <th className="px-4 py-3 font-medium">Status</th>
+            <th className="px-4 py-3 font-medium">Dispatched At</th>
             <th className="px-4 py-3 font-medium">Updated By</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-100">
           {requests.length === 0 && (
             <tr>
-              <td colSpan={9} className="px-4 py-8 text-center text-sm text-zinc-500">
+              <td colSpan={10} className="px-4 py-8 text-center text-sm text-zinc-500">
                 No swapping requests found.
               </td>
             </tr>
@@ -71,6 +72,11 @@ export default function SwappingRequestsTable({
               </td>
               <td className="px-4 py-3">
                 <StatusToggleButton id={r.id} status={r.status} action={setSwappingRequestStatus} />
+              </td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs text-zinc-500">
+                {r.dispatchedAt
+                  ? r.dispatchedAt.toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })
+                  : "—"}
               </td>
               <td className="whitespace-nowrap px-4 py-3 text-xs text-zinc-500">
                 {r.lastChangedBy ?? "—"}

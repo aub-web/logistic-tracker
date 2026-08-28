@@ -39,13 +39,14 @@ export default function DeviceRequestsTable({
             <th className="px-4 py-3 font-medium">Qty</th>
             <th className="px-4 py-3 font-medium">SDR / SS</th>
             <th className="px-4 py-3 font-medium">Status</th>
+            <th className="px-4 py-3 font-medium">Dispatched At</th>
             <th className="px-4 py-3 font-medium">Updated By</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-100">
           {requests.length === 0 && (
             <tr>
-              <td colSpan={12} className="px-4 py-8 text-center text-sm text-zinc-500">
+              <td colSpan={13} className="px-4 py-8 text-center text-sm text-zinc-500">
                 No device requests found.
               </td>
             </tr>
@@ -85,6 +86,11 @@ export default function DeviceRequestsTable({
               </td>
               <td className="px-4 py-3">
                 <StatusToggleButton id={r.id} status={r.status} action={setDeviceRequestStatus} />
+              </td>
+              <td className="whitespace-nowrap px-4 py-3 text-xs text-zinc-500">
+                {r.dispatchedAt
+                  ? r.dispatchedAt.toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })
+                  : "—"}
               </td>
               <td className="whitespace-nowrap px-4 py-3 text-xs text-zinc-500">
                 {r.lastChangedBy ?? "—"}

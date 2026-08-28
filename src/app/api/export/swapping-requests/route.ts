@@ -43,6 +43,7 @@ export async function GET(request: Request) {
       "SDR",
       "SS",
       "Status",
+      "Dispatched At",
       "Updated By",
     ],
     requests.map((r) => [
@@ -57,6 +58,7 @@ export async function GET(request: Request) {
       r.sdrName,
       r.ssName ?? "",
       r.status === "DISPATCHED" ? "Dispatched" : "In Progress",
+      r.dispatchedAt ? r.dispatchedAt.toISOString() : "",
       r.lastChangedBy ?? "",
     ]),
   );
