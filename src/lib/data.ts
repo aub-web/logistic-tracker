@@ -140,27 +140,40 @@ const DEVICE_CATEGORY_RULES: { category: string; test: RegExp }[] = [
 ];
 
 const OTHER_CATEGORY = "Other";
+const POWERBANK_CATEGORY = "Powerbank";
 const DEVICE_CATEGORIES = [...DEVICE_CATEGORY_RULES.map((r) => r.category), OTHER_CATEGORY];
 
 function categorize(deviceType: string): string {
   return DEVICE_CATEGORY_RULES.find((rule) => rule.test.test(deviceType))?.category ?? OTHER_CATEGORY;
 }
 
-/** Total dispatched (deployed) devices, grouped by device type category. */
+/** Total dispatched (deployed) devices, grouped by device type category —
+ * counts both the primary request and any additional-request units on the
+ * same submission, since both ship together once marked Dispatched. */
 export async function getDeployedDeviceSummary(): Promise<{
   categories: DeviceCategorySummary[];
   totalDeployed: number;
 }> {
   const dispatched = await prisma.deviceRequest.findMany({
     where: { status: "DISPATCHED" },
-    select: { deviceType: true, quantity: true },
+    select: {
+      deviceType: true,
+      quantity: true,
+      additionalRequestDeviceType: true,
+      additionalRequestQuantity: true,
+    },
   });
 
   const counts = new Map<string, number>(DEVICE_CATEGORIES.map((category) => [category, 0]));
 
-  for (const { deviceType, quantity } of dispatched) {
+  for (const { deviceType, quantity, additionalRequestDeviceType, additionalRequestQuantity } of dispatched) {
     const category = categorize(deviceType);
     counts.set(category, (counts.get(category) ?? 0) + quantity);
+
+    if (additionalRequestDeviceType && additionalRequestQuantity) {
+      const additionalCategory = categorize(additionalRequestDeviceType);
+      counts.set(additionalCategory, (counts.get(additionalCategory) ?? 0) + additionalRequestQuantity);
+    }
   }
 
   const categories = Array.from(counts, ([category, count]) => ({ category, count }));
@@ -171,9 +184,21 @@ export async function getDeployedDeviceSummary(): Promise<{
 
 export interface BusinessDeviceSummaryRow {
   businessName: string;
+  /** Every device requested, by category — the primary DEVICE TYPE field. */
   categoryCounts: Record<string, number>;
   /** Total devices requested by this business, across every submission. */
   totalDeviceQty: number;
+  /** Of the above, how many are on requests marked Dispatched. */
+  totalDispatchedQty: number;
+  /** The separate "extra units" a submission can ask for alongside its
+   * primary request (ADDITIONAL REQUEST DEVICE TYPE / QUANTITY FOR
+   * ADDITIONAL REQUEST), by category. */
+  additionalCategoryCounts: Record<string, number>;
+  totalAdditionalQty: number;
+  /** Expected SD cards needed — one per device unit (primary + additional),
+   * except Powerbanks, which don't use one. Compare against totalSdCards
+   * (what's actually been swapped) to spot gaps. */
+  expectedSdCards: number;
   totalSdCards: number;
 }
 
@@ -185,7 +210,14 @@ export const BUSINESS_SUMMARY_CATEGORIES = DEVICE_CATEGORIES;
 export async function getBusinessDeviceSummary(): Promise<BusinessDeviceSummaryRow[]> {
   const [deviceRows, swapRows] = await Promise.all([
     prisma.deviceRequest.findMany({
-      select: { businessName: true, deviceType: true, quantity: true },
+      select: {
+        businessName: true,
+        deviceType: true,
+        quantity: true,
+        status: true,
+        additionalRequestDeviceType: true,
+        additionalRequestQuantity: true,
+      },
     }),
     prisma.swappingRequest.findMany({
       select: { businessName: true, sdCardCount: true },
@@ -201,6 +233,10 @@ export async function getBusinessDeviceSummary(): Promise<BusinessDeviceSummaryR
         businessName,
         categoryCounts: Object.fromEntries(DEVICE_CATEGORIES.map((c) => [c, 0])),
         totalDeviceQty: 0,
+        totalDispatchedQty: 0,
+        additionalCategoryCounts: Object.fromEntries(DEVICE_CATEGORIES.map((c) => [c, 0])),
+        totalAdditionalQty: 0,
+        expectedSdCards: 0,
         totalSdCards: 0,
       };
       rows.set(businessName, row);
@@ -208,11 +244,31 @@ export async function getBusinessDeviceSummary(): Promise<BusinessDeviceSummaryR
     return row;
   }
 
-  for (const { businessName, deviceType, quantity } of deviceRows) {
+  for (const {
+    businessName,
+    deviceType,
+    quantity,
+    status,
+    additionalRequestDeviceType,
+    additionalRequestQuantity,
+  } of deviceRows) {
     const row = getRow(businessName);
     const category = categorize(deviceType);
     row.categoryCounts[category] += quantity;
     row.totalDeviceQty += quantity;
+    if (category !== POWERBANK_CATEGORY) row.expectedSdCards += quantity;
+
+    // Dispatching a request ships everything on it — the primary quantity
+    // and any additional-request units together.
+    if (status === "DISPATCHED") row.totalDispatchedQty += quantity;
+
+    if (additionalRequestDeviceType && additionalRequestQuantity) {
+      const additionalCategory = categorize(additionalRequestDeviceType);
+      row.additionalCategoryCounts[additionalCategory] += additionalRequestQuantity;
+      row.totalAdditionalQty += additionalRequestQuantity;
+      if (additionalCategory !== POWERBANK_CATEGORY) row.expectedSdCards += additionalRequestQuantity;
+      if (status === "DISPATCHED") row.totalDispatchedQty += additionalRequestQuantity;
+    }
   }
 
   for (const { businessName, sdCardCount } of swapRows) {

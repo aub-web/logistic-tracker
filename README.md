@@ -19,7 +19,26 @@ whatever filters are active, and a **status** control — click **In
 Progress** or **Dispatched** directly rather than toggling. Whoever is
 logged in when they change a status gets recorded in the **Updated By**
 column (see "Identity" below). A **Summary** page totals dispatched devices
-by type (Mono iPhones / Mono Insta 360 / Multicam / Other).
+by type (Mono iPhones / Mono Insta 360 / Multicam / Powerbank / Other),
+plus a per-business breakdown (see "Additional requests" below).
+
+### Additional requests
+
+A device request submission can carry a second, smaller request alongside
+its primary one — the form's `ADDITIONAL REQUEST DEVICE TYPE` /
+`QUANTITY FOR ADDITIONAL REQUEST` fields (e.g. a business asking for 5
+Multicams up front, plus 3 more of something else on the same submission,
+or filled in on a separate later submission for a business that already has
+a device). The Summary's per-business table tracks these separately from
+the primary request, but **they count together for dispatch**: marking a
+request Dispatched ships both the primary and additional quantities, so
+`Total Dispatched` = primary + additional. The top category cards work the
+same way.
+
+Each device unit dispatched (primary or additional) is assumed to need one
+SD card, **except Powerbanks** — the Summary table shows this as an
+"Expected" SD card count next to the actual number swapped (from the
+Swapping Request form), so a gap between the two is visible at a glance.
 
 ### Identity
 

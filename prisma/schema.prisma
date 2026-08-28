@@ -64,6 +64,12 @@ model DeviceRequest {
   deviceType   String
   quantity     Int
 
+  // "ADDITIONAL REQUEST DEVICE TYPE" / "QUANTITY FOR ADDITIONAL REQUEST" —
+  // an SDR can ask for extra units of a device type beyond the primary
+  // request on the same submission. Null when nothing was requested there.
+  additionalRequestDeviceType String?
+  additionalRequestQuantity   Int?
+
   status       RequestStatus @default(IN_PROGRESS)
   dispatchedAt DateTime?     @db.Timestamptz(3)
 

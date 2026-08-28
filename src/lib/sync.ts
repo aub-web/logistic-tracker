@@ -51,6 +51,14 @@ function parseQuantity(raw: string): number {
   return Number.isFinite(n) && n > 0 ? n : 1;
 }
 
+/** Like parseQuantity, but for an optional field — an empty/unparseable
+ * value means "nothing requested here", not "1". */
+function parseOptionalQuantity(raw: string): number | null {
+  if (!raw.trim()) return null;
+  const n = parseInt(raw.replace(/[^0-9-]/g, ""), 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 function mapDeviceRequestType(raw: string): DeviceRequestType {
   const v = raw.toUpperCase();
   if (v.includes("REPLAC")) return "REPLACEMENT";
@@ -122,7 +130,9 @@ export async function syncDeviceRequests(): Promise<SyncResult> {
     businessAddress: findColumn(col, "BUSINESS ADDRESS"),
     deliveryMode: findColumn(col, "DELIVERY MODE"),
     deviceType: findColumn(col, "DEVICE TYPE"),
-    quantity: findColumn(col, "QUANTITY"),
+    quantity: findColumn(col, "QUANTITY FOR DEVICE TYPE", "QUANTITY"),
+    additionalRequestDeviceType: findColumn(col, "ADDITIONAL REQUEST DEVICE TYPE"),
+    additionalRequestQuantity: findColumn(col, "QUANTITY FOR ADDITIONAL REQUEST"),
   };
 
   const existing = await prisma.deviceRequest.findMany({
@@ -157,6 +167,8 @@ export async function syncDeviceRequests(): Promise<SyncResult> {
       deliveryMode: cell(row, idx.deliveryMode),
       deviceType: cell(row, idx.deviceType),
       quantity: parseQuantity(cell(row, idx.quantity)),
+      additionalRequestDeviceType: cell(row, idx.additionalRequestDeviceType) || null,
+      additionalRequestQuantity: parseOptionalQuantity(cell(row, idx.additionalRequestQuantity)),
       status,
       dispatchedAt: status === "DISPATCHED" ? new Date() : null,
     });
