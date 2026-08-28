@@ -21,7 +21,7 @@ export default function TrashBusinessTable({
             <th className="px-4 py-3 text-right font-medium">Device Request (Qty)</th>
             <th className="px-4 py-3 text-right font-medium">Total Dispatched</th>
             <th className="px-4 py-3 font-medium">Additional Request Device</th>
-            <th className="px-4 py-3 text-right font-medium">SD Cards (Swapped / Expected)</th>
+            <th className="px-4 py-3 text-right font-medium">Total SD Card</th>
             <th className="px-4 py-3 font-medium">Deleted By</th>
             <th className="px-4 py-3 font-medium">Deleted At</th>
             <th className="px-4 py-3 font-medium">Actions</th>
@@ -42,7 +42,7 @@ export default function TrashBusinessTable({
                 <BusinessStatusBadge status={statuses.get(row.businessName)} />
               </td>
               <td className="px-4 py-3 text-zinc-600">
-                <DeviceBadges counts={row.categoryCounts} />
+                <DeviceBadges counts={row.categoryCounts} showQty={false} />
               </td>
               <td className="px-4 py-3 text-right font-medium text-zinc-900">
                 {row.totalDeviceQty}
@@ -53,24 +53,7 @@ export default function TrashBusinessTable({
               <td className="px-4 py-3 text-zinc-600">
                 <DeviceBadges counts={row.additionalCategoryCounts} />
               </td>
-              <td className="px-4 py-3 text-right text-zinc-600">
-                {row.expectedSdCards === 0 ? (
-                  "—"
-                ) : (
-                  <>
-                    <span
-                      className={
-                        row.totalSdCards < row.expectedSdCards
-                          ? "font-medium text-amber-700"
-                          : "text-zinc-600"
-                      }
-                    >
-                      {row.totalSdCards}
-                    </span>
-                    <span className="text-zinc-400"> / {row.expectedSdCards}</span>
-                  </>
-                )}
-              </td>
+              <td className="px-4 py-3 text-right text-zinc-600">{row.totalSdCards || "—"}</td>
               <td className="whitespace-nowrap px-4 py-3 text-zinc-600">{row.deletedBy}</td>
               <td className="whitespace-nowrap px-4 py-3 text-zinc-600">
                 {row.deletedAt.toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}

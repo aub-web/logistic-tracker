@@ -165,11 +165,6 @@ const DEVICE_CATEGORY_RULES: { category: string; test: RegExp }[] = [
 ];
 
 const OTHER_CATEGORY = "Other";
-const POWERBANK_CATEGORY = "Powerbank";
-const MONO_IPHONE_CATEGORY = "Mono iPhones";
-// Only Multicam and Mono Insta 360 actually use an SD card — Mono iPhones
-// record to internal storage and Powerbanks aren't a camera at all.
-const NO_SD_CARD_CATEGORIES = new Set([POWERBANK_CATEGORY, MONO_IPHONE_CATEGORY]);
 const DEVICE_CATEGORIES = [...DEVICE_CATEGORY_RULES.map((r) => r.category), OTHER_CATEGORY];
 
 function categorize(deviceType: string): string {
@@ -246,10 +241,6 @@ export interface BusinessDeviceSummaryRow {
    * ADDITIONAL REQUEST), by category. */
   additionalCategoryCounts: Record<string, number>;
   totalAdditionalQty: number;
-  /** Expected SD cards needed — one per device unit (primary + additional),
-   * except Powerbanks, which don't use one. Compare against totalSdCards
-   * (what's actually been swapped) to spot gaps. */
-  expectedSdCards: number;
   totalSdCards: number;
 }
 
@@ -285,7 +276,6 @@ function aggregateBusinessRows(
         totalDispatchedQty: 0,
         additionalCategoryCounts: Object.fromEntries(DEVICE_CATEGORIES.map((c) => [c, 0])),
         totalAdditionalQty: 0,
-        expectedSdCards: 0,
         totalSdCards: 0,
       };
       rows.set(businessName, row);
@@ -305,7 +295,6 @@ function aggregateBusinessRows(
     const category = categorize(deviceType);
     row.categoryCounts[category] += quantity;
     row.totalDeviceQty += quantity;
-    if (!NO_SD_CARD_CATEGORIES.has(category)) row.expectedSdCards += quantity;
 
     // Dispatching a request ships everything on it — the primary quantity
     // and any additional-request units together.
@@ -315,7 +304,6 @@ function aggregateBusinessRows(
       const additionalCategory = categorize(additionalRequestDeviceType);
       row.additionalCategoryCounts[additionalCategory] += additionalRequestQuantity;
       row.totalAdditionalQty += additionalRequestQuantity;
-      if (!NO_SD_CARD_CATEGORIES.has(additionalCategory)) row.expectedSdCards += additionalRequestQuantity;
       if (status === "DISPATCHED") row.totalDispatchedQty += additionalRequestQuantity;
     }
   }
@@ -399,7 +387,6 @@ export async function getTrashedBusinessSummary(): Promise<TrashedBusinessRow[]>
         totalDispatchedQty: 0,
         additionalCategoryCounts: Object.fromEntries(DEVICE_CATEGORIES.map((c) => [c, 0])),
         totalAdditionalQty: 0,
-        expectedSdCards: 0,
         totalSdCards: 0,
       });
     }
