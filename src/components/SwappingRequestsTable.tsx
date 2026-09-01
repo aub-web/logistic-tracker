@@ -92,11 +92,16 @@ export default function SwappingRequestsTable({
               </td>
               <td className="break-words px-3 py-3">
                 <StatusToggleButton id={r.id} status={r.status} action={setSwappingRequestStatus} />
-                {r.dispatchedAt && (
+                {r.lastChangedBy ? (
                   <div className="mt-1 text-xs text-zinc-500">
-                    {r.dispatchedAt.toLocaleString("en-PH", { dateStyle: "short", timeStyle: "short" })}
-                    {r.lastChangedBy && ` · ${r.lastChangedBy}`}
+                    {(r.dispatchedAt ?? r.updatedAt).toLocaleString("en-PH", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}{" "}
+                    · {r.lastChangedBy}
                   </div>
+                ) : (
+                  <div className="mt-1 text-xs text-zinc-400">Not yet touched</div>
                 )}
               </td>
             </tr>

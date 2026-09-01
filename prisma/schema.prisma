@@ -13,6 +13,7 @@ datasource db {
 }
 
 enum RequestStatus {
+  NEW
   IN_PROGRESS
   DISPATCHED
 }
@@ -74,7 +75,7 @@ model DeviceRequest {
   // filled in when requestType is REPLACEMENT.
   replacementIssue String?
 
-  status       RequestStatus @default(IN_PROGRESS)
+  status       RequestStatus @default(NEW)
   dispatchedAt DateTime?     @db.Timestamptz(3)
 
   // Name of whoever last changed `status` from the tracker UI (set at login,
@@ -141,7 +142,7 @@ model SwappingRequest {
 
   sdCardCount Int
 
-  status       RequestStatus @default(IN_PROGRESS)
+  status       RequestStatus @default(NEW)
   dispatchedAt DateTime?     @db.Timestamptz(3)
 
   // Name of whoever last changed `status` from the tracker UI (set at login,

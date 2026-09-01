@@ -10,6 +10,12 @@ const REQUEST_TYPE_LABEL: Record<string, string> = {
   PULL_OUT: "Pull-out",
 };
 
+const STATUS_LABEL: Record<string, string> = {
+  NEW: "New",
+  IN_PROGRESS: "In Progress",
+  DISPATCHED: "Dispatched",
+};
+
 const BUSINESS_TYPE_LABEL: Record<string, string> = {
   DIRECT_BUSINESS: "Direct Business",
   EXTERNAL_PARTNER: "External Partner",
@@ -81,7 +87,7 @@ export async function GET(request: Request) {
       r.sdrName,
       r.ssName ?? "",
       r.replacementIssue ?? "",
-      r.status === "DISPATCHED" ? "Dispatched" : "In Progress",
+      STATUS_LABEL[r.status] ?? r.status,
       r.dispatchedAt ? r.dispatchedAt.toISOString() : "",
       r.lastChangedBy ?? "",
     ]),

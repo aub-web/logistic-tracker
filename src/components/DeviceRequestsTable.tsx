@@ -20,19 +20,19 @@ const BUSINESS_TYPE_LABEL: Record<string, string> = {
 // table never grows wider than its container, no matter the content. Rows
 // wrap and grow taller instead of forcing a horizontal scrollbar.
 const COLUMN_WIDTHS = [
-  5, // Req. ID
+  4, // Req. ID
   7, // Submitted
   6, // Request Date
-  6, // Type
+  5, // Type
   9, // Business
   8, // Contact
   11, // Address
   8, // Delivery
   7, // Device
   3, // Qty
-  7, // SDR / SS
+  6, // SDR / SS
   10, // Replacement Issue
-  13, // Status
+  16, // Status
 ];
 
 export default function DeviceRequestsTable({
@@ -112,11 +112,16 @@ export default function DeviceRequestsTable({
               <td className="break-words px-3 py-3 text-zinc-600">{r.replacementIssue || "—"}</td>
               <td className="break-words px-3 py-3">
                 <StatusToggleButton id={r.id} status={r.status} action={setDeviceRequestStatus} />
-                {r.dispatchedAt && (
+                {r.lastChangedBy ? (
                   <div className="mt-1 text-xs text-zinc-500">
-                    {r.dispatchedAt.toLocaleString("en-PH", { dateStyle: "short", timeStyle: "short" })}
-                    {r.lastChangedBy && ` · ${r.lastChangedBy}`}
+                    {(r.dispatchedAt ?? r.updatedAt).toLocaleString("en-PH", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}{" "}
+                    · {r.lastChangedBy}
                   </div>
+                ) : (
+                  <div className="mt-1 text-xs text-zinc-400">Not yet touched</div>
                 )}
               </td>
             </tr>

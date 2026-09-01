@@ -76,11 +76,12 @@ function mapBusinessType(raw: string): BusinessType {
 
 // The sheet's own "Status" column (from the existing Apps Script tracker)
 // has more states than ours (New / Completed / Cancelled at least). We only
-// track dispatched vs. not, so anything other than "Completed" starts as
-// In Progress — that's the accurate default for "New" and the safe default
-// for "Cancelled" (it was never actually dispatched).
+// track New / In Progress / Dispatched, so anything other than "Completed"
+// starts as New — that's the accurate default for a fresh submission and
+// the safe default for "Cancelled" (it was never actually dispatched). A
+// logistics team member moves it to In Progress once they start on it.
 function mapInitialStatus(raw: string): RequestStatus {
-  return raw.trim().toUpperCase() === "COMPLETED" ? "DISPATCHED" : "IN_PROGRESS";
+  return raw.trim().toUpperCase() === "COMPLETED" ? "DISPATCHED" : "NEW";
 }
 
 /** The Sheet's "Updated By" column is whatever Google Forms/Apps Script
@@ -119,24 +120,24 @@ interface Completion {
   lastChangedBy: string | null;
 }
 
-/** Rows the Sheet marks "Completed" that our DB still shows In Progress —
- * catches up rows whose status changed directly on the Sheet (the old Apps
- * Script tracker workflow logistics still uses day-to-day) instead of
- * through this app's own status toggle. Attributes the change to the
- * Sheet's own "Updated By" column, same as a manual toggle would. Never
+/** Rows the Sheet marks "Completed" that our DB still shows New or In
+ * Progress — catches up rows whose status changed directly on the Sheet
+ * (the old Apps Script tracker workflow logistics still uses day-to-day)
+ * instead of through this app's own status toggle. Attributes the change to
+ * the Sheet's own "Updated By" column, same as a manual toggle would. Never
  * touches a row that's already Dispatched here, so a status set from this
  * app's UI is never overwritten by stale Sheet state. */
 function findCompletions(
   dataRows: string[][],
   idx: { requestId: number; status: number; lastUpdated: number; sheetUpdatedBy: number },
-  inProgressIds: Set<string>,
+  notDispatchedIds: Set<string>,
 ): Completion[] {
   const completions: Completion[] = [];
   dataRows.forEach((row, i) => {
     if (isBlankRow(row)) return;
     const sheetRowIndex = i + 2;
     const requestId = resolveRequestId(row, idx.requestId, sheetRowIndex);
-    if (!inProgressIds.has(requestId)) return;
+    if (!notDispatchedIds.has(requestId)) return;
     if (cell(row, idx.status).toUpperCase() !== "COMPLETED") return;
 
     const lastUpdated = cell(row, idx.lastUpdated);
@@ -240,14 +241,14 @@ export async function syncDeviceRequests(): Promise<SyncResult> {
     await prisma.deviceRequest.createMany({ data: toCreate, skipDuplicates: true });
   }
 
-  const inProgress = await prisma.deviceRequest.findMany({
-    where: { status: "IN_PROGRESS" },
+  const notDispatched = await prisma.deviceRequest.findMany({
+    where: { status: { in: ["NEW", "IN_PROGRESS"] } },
     select: { requestId: true },
   });
   const completions = findCompletions(
     dataRows,
     idx,
-    new Set(inProgress.map((r) => r.requestId)),
+    new Set(notDispatched.map((r) => r.requestId)),
   );
   await Promise.all(
     completions.map((c) =>
@@ -340,14 +341,14 @@ export async function syncSwappingRequests(): Promise<SyncResult> {
     });
   }
 
-  const inProgress = await prisma.swappingRequest.findMany({
-    where: { status: "IN_PROGRESS" },
+  const notDispatched = await prisma.swappingRequest.findMany({
+    where: { status: { in: ["NEW", "IN_PROGRESS"] } },
     select: { requestId: true },
   });
   const completions = findCompletions(
     dataRows,
     idx,
-    new Set(inProgress.map((r) => r.requestId)),
+    new Set(notDispatched.map((r) => r.requestId)),
   );
   await Promise.all(
     completions.map((c) =>

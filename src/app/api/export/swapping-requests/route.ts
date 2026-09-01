@@ -10,6 +10,12 @@ const BUSINESS_TYPE_LABEL: Record<string, string> = {
   OUTBOUND: "Outbound",
 };
 
+const STATUS_LABEL: Record<string, string> = {
+  NEW: "New",
+  IN_PROGRESS: "In Progress",
+  DISPATCHED: "Dispatched",
+};
+
 function parseBusinessType(value: string | null): BusinessType | undefined {
   return value === "DIRECT_BUSINESS" || value === "EXTERNAL_PARTNER" || value === "OUTBOUND"
     ? value
@@ -59,7 +65,7 @@ export async function GET(request: Request) {
       r.sdCardCount,
       r.sdrName,
       r.ssName ?? "",
-      r.status === "DISPATCHED" ? "Dispatched" : "In Progress",
+      STATUS_LABEL[r.status] ?? r.status,
       r.dispatchedAt ? r.dispatchedAt.toISOString() : "",
       r.lastChangedBy ?? "",
     ]),

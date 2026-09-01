@@ -83,6 +83,24 @@ function ChevronIcon({ open }: { open: boolean }) {
   );
 }
 
+function CollapseToggleIcon({ collapsed }: { collapsed: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      className={`h-4 w-4 text-white/60 transition-transform ${collapsed ? "rotate-180" : ""}`}
+    >
+      <path
+        d="M12.5 4.5 7 10l5.5 5.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 const NAV_SECTIONS = [
   {
     href: "/device-requests",
@@ -123,6 +141,11 @@ export default function SidebarNav({ name }: { name: string }) {
   // from that default, so it never needs to resync via an effect when the
   // route (and therefore the default) changes.
   const [toggled, setToggled] = useState<Set<string>>(new Set());
+  const [collapsed, setCollapsed] = useState(false);
+
+  function toggleCollapsed() {
+    setCollapsed((prev) => !prev);
+  }
 
   function isSectionOpen(href: string): boolean {
     const defaultOpen = pathname.startsWith(href);
@@ -139,18 +162,33 @@ export default function SidebarNav({ name }: { name: string }) {
   }
 
   return (
-    <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col overflow-y-auto bg-[#14293D]">
-      <div className="px-5 py-6">
-        <p className="text-base font-semibold tracking-tight text-white">
-          Atlas Capture
-        </p>
-        <p className="mt-0.5 text-xs text-white/60">Logistics PH Team</p>
+    <aside
+      className={`sticky top-0 flex h-screen shrink-0 flex-col overflow-y-auto overflow-x-hidden bg-[#14293D] transition-[width] duration-150 ${
+        collapsed ? "w-16" : "w-60"
+      }`}
+    >
+      <div className={`flex items-center justify-between px-3 py-6 ${collapsed ? "px-2" : "px-5"}`}>
+        {!collapsed && (
+          <div className="min-w-0">
+            <p className="truncate text-base font-semibold tracking-tight text-white">Atlas Capture</p>
+            <p className="mt-0.5 truncate text-xs text-white/60">Logistics PH Team</p>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-white/10"
+        >
+          <CollapseToggleIcon collapsed={collapsed} />
+        </button>
       </div>
 
       <nav className="flex-1 space-y-1 px-3">
         {NAV_SECTIONS.map((section) => {
           const active = pathname.startsWith(section.href);
-          const open = isSectionOpen(section.href);
+          const open = !collapsed && isSectionOpen(section.href);
           const Icon = section.icon;
 
           return (
@@ -162,25 +200,28 @@ export default function SidebarNav({ name }: { name: string }) {
               >
                 <Link
                   href={section.href}
-                  className={`flex flex-1 items-center gap-3 py-2 pl-2.5 pr-1 text-sm font-medium ${
-                    active ? "text-white" : "text-white/70 hover:text-white"
-                  }`}
+                  title={section.label}
+                  className={`flex flex-1 items-center gap-3 py-2 text-sm font-medium ${
+                    collapsed ? "justify-center pl-0 pr-0" : "pl-2.5 pr-1"
+                  } ${active ? "text-white" : "text-white/70 hover:text-white"}`}
                 >
                   <span
                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${section.color}`}
                   >
                     <Icon />
                   </span>
-                  {section.label}
+                  {!collapsed && section.label}
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => toggleSection(section.href)}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center"
-                  aria-label={open ? `Collapse ${section.label}` : `Expand ${section.label}`}
-                >
-                  <ChevronIcon open={open} />
-                </button>
+                {!collapsed && (
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(section.href)}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center"
+                    aria-label={open ? `Collapse ${section.label}` : `Expand ${section.label}`}
+                  >
+                    <ChevronIcon open={open} />
+                  </button>
+                )}
               </div>
 
               {open && (
@@ -209,7 +250,10 @@ export default function SidebarNav({ name }: { name: string }) {
 
         <Link
           href="/pulled-out"
-          className={`flex items-center gap-3 rounded-lg border-l-2 py-2 pl-2.5 pr-3 text-sm font-medium transition ${
+          title="Pulled Out"
+          className={`flex items-center rounded-lg border-l-2 py-2 text-sm font-medium transition ${
+            collapsed ? "justify-center pl-0 pr-0" : "gap-3 pl-2.5 pr-3"
+          } ${
             pathname === "/pulled-out"
               ? "border-emerald-400 bg-white/10 text-white"
               : "border-transparent text-white/70 hover:bg-white/5 hover:text-white"
@@ -218,12 +262,15 @@ export default function SidebarNav({ name }: { name: string }) {
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-red-500">
             <PulledOutIcon />
           </span>
-          Pulled Out
+          {!collapsed && "Pulled Out"}
         </Link>
 
         <Link
           href="/trash"
-          className={`flex items-center gap-3 rounded-lg border-l-2 py-2 pl-2.5 pr-3 text-sm font-medium transition ${
+          title="Trash"
+          className={`flex items-center rounded-lg border-l-2 py-2 text-sm font-medium transition ${
+            collapsed ? "justify-center pl-0 pr-0" : "gap-3 pl-2.5 pr-3"
+          } ${
             pathname === "/trash"
               ? "border-emerald-400 bg-white/10 text-white"
               : "border-transparent text-white/70 hover:bg-white/5 hover:text-white"
@@ -232,15 +279,17 @@ export default function SidebarNav({ name }: { name: string }) {
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-500">
             <TrashIcon />
           </span>
-          Trash
+          {!collapsed && "Trash"}
         </Link>
       </nav>
 
       <div className="border-t border-white/10 px-3 py-4">
-        <p className="truncate px-2.5 pb-2 text-xs text-white/50" title={name}>
-          Signed in as <span className="font-medium text-white/80">{name}</span>
-        </p>
-        <LogoutButton />
+        {!collapsed && (
+          <p className="truncate px-2.5 pb-2 text-xs text-white/50" title={name}>
+            Signed in as <span className="font-medium text-white/80">{name}</span>
+          </p>
+        )}
+        <LogoutButton collapsed={collapsed} />
       </div>
     </aside>
   );

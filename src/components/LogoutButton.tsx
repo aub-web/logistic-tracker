@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { logoutAdmin } from "@/lib/actions/admin-auth-actions";
 
-export default function LogoutButton() {
+export default function LogoutButton({ collapsed }: { collapsed?: boolean }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -12,6 +12,7 @@ export default function LogoutButton() {
     <button
       type="button"
       disabled={isPending}
+      title="Log out"
       onClick={() =>
         startTransition(async () => {
           await logoutAdmin();
@@ -19,7 +20,9 @@ export default function LogoutButton() {
           router.refresh();
         })
       }
-      className="flex w-full items-center gap-3 rounded-lg border-l-2 border-transparent py-2 pl-2.5 pr-3 text-sm font-medium text-white/70 transition hover:bg-white/5 hover:text-white disabled:opacity-50"
+      className={`flex w-full items-center rounded-lg border-l-2 border-transparent text-sm font-medium text-white/70 transition hover:bg-white/5 hover:text-white disabled:opacity-50 ${
+        collapsed ? "justify-center py-2" : "gap-3 py-2 pl-2.5 pr-3"
+      }`}
     >
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/15">
         <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
@@ -39,7 +42,7 @@ export default function LogoutButton() {
           />
         </svg>
       </span>
-      Log out
+      {!collapsed && "Log out"}
     </button>
   );
 }
