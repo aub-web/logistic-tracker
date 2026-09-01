@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { fetchSheetRows } from "@/lib/google-sheets";
+import { TEAM_MEMBERS } from "@/lib/team";
 import type {
   BusinessType,
   DeviceRequestType,
@@ -82,6 +83,25 @@ function mapInitialStatus(raw: string): RequestStatus {
   return raw.trim().toUpperCase() === "COMPLETED" ? "DISPATCHED" : "IN_PROGRESS";
 }
 
+/** The Sheet's "Updated By" column is whatever Google Forms/Apps Script
+ * stamped it with — usually a work email ("arnee@atlascapture.io"). Maps
+ * that back to the roster's display name ("Arnee") so attribution reads the
+ * same whether the status was set here or on the Sheet; falls back to the
+ * email's local part, then the raw value, if nothing matches. */
+function formatSheetUpdatedBy(raw: string): string | null {
+  const value = raw.trim();
+  if (!value) return null;
+
+  const localPart = value.includes("@") ? value.split("@")[0] : value;
+  const match = TEAM_MEMBERS.find((name) => {
+    const first = name.split(" ")[0];
+    return first.toLowerCase() === localPart.toLowerCase();
+  });
+  if (match) return match;
+
+  return localPart.charAt(0).toUpperCase() + localPart.slice(1);
+}
+
 function isBlankRow(row: string[]): boolean {
   return row.every((c) => !c || !c.trim());
 }
@@ -93,8 +113,46 @@ function resolveRequestId(row: string[], idx: number, sheetRowIndex: number): st
   return cell(row, idx) || `ROW-${sheetRowIndex}`;
 }
 
+interface Completion {
+  requestId: string;
+  dispatchedAt: Date;
+  lastChangedBy: string | null;
+}
+
+/** Rows the Sheet marks "Completed" that our DB still shows In Progress —
+ * catches up rows whose status changed directly on the Sheet (the old Apps
+ * Script tracker workflow logistics still uses day-to-day) instead of
+ * through this app's own status toggle. Attributes the change to the
+ * Sheet's own "Updated By" column, same as a manual toggle would. Never
+ * touches a row that's already Dispatched here, so a status set from this
+ * app's UI is never overwritten by stale Sheet state. */
+function findCompletions(
+  dataRows: string[][],
+  idx: { requestId: number; status: number; lastUpdated: number; sheetUpdatedBy: number },
+  inProgressIds: Set<string>,
+): Completion[] {
+  const completions: Completion[] = [];
+  dataRows.forEach((row, i) => {
+    if (isBlankRow(row)) return;
+    const sheetRowIndex = i + 2;
+    const requestId = resolveRequestId(row, idx.requestId, sheetRowIndex);
+    if (!inProgressIds.has(requestId)) return;
+    if (cell(row, idx.status).toUpperCase() !== "COMPLETED") return;
+
+    const lastUpdated = cell(row, idx.lastUpdated);
+    completions.push({
+      requestId,
+      dispatchedAt: lastUpdated ? parseTimestamp(lastUpdated) : new Date(),
+      lastChangedBy: formatSheetUpdatedBy(cell(row, idx.sheetUpdatedBy)),
+    });
+  });
+  return completions;
+}
+
 export interface SyncResult {
   created: number;
+  /** Existing rows the Sheet's own Status/Updated By caught up to Dispatched. */
+  updated: number;
   total: number;
 }
 
@@ -109,7 +167,7 @@ export async function syncDeviceRequests(): Promise<SyncResult> {
   }
 
   const rows = await fetchSheetRows(spreadsheetId, gid);
-  if (rows.length < 2) return { created: 0, total: 0 };
+  if (rows.length < 2) return { created: 0, updated: 0, total: 0 };
 
   const [header, ...dataRows] = rows;
   const col = buildColumnIndex(header);
@@ -134,6 +192,8 @@ export async function syncDeviceRequests(): Promise<SyncResult> {
     additionalRequestDeviceType: findColumn(col, "ADDITIONAL REQUEST DEVICE TYPE"),
     additionalRequestQuantity: findColumn(col, "QUANTITY FOR ADDITIONAL REQUEST"),
     replacementIssue: findColumn(col, "IF REPLACEMENT, PROVIDE THE ISSUE & TROUBLESHOOTING PERFORMED"),
+    lastUpdated: findColumn(col, "Last Updated"),
+    sheetUpdatedBy: findColumn(col, "Updated By"),
   };
 
   const existing = await prisma.deviceRequest.findMany({
@@ -180,7 +240,29 @@ export async function syncDeviceRequests(): Promise<SyncResult> {
     await prisma.deviceRequest.createMany({ data: toCreate, skipDuplicates: true });
   }
 
-  return { created: toCreate.length, total: dataRows.length };
+  const inProgress = await prisma.deviceRequest.findMany({
+    where: { status: "IN_PROGRESS" },
+    select: { requestId: true },
+  });
+  const completions = findCompletions(
+    dataRows,
+    idx,
+    new Set(inProgress.map((r) => r.requestId)),
+  );
+  await Promise.all(
+    completions.map((c) =>
+      prisma.deviceRequest.update({
+        where: { requestId: c.requestId },
+        data: {
+          status: "DISPATCHED",
+          dispatchedAt: c.dispatchedAt,
+          lastChangedBy: c.lastChangedBy,
+        },
+      }),
+    ),
+  );
+
+  return { created: toCreate.length, updated: completions.length, total: dataRows.length };
 }
 
 export async function syncSwappingRequests(): Promise<SyncResult> {
@@ -194,7 +276,7 @@ export async function syncSwappingRequests(): Promise<SyncResult> {
   }
 
   const rows = await fetchSheetRows(spreadsheetId, gid);
-  if (rows.length < 2) return { created: 0, total: 0 };
+  if (rows.length < 2) return { created: 0, updated: 0, total: 0 };
 
   const [header, ...dataRows] = rows;
   const col = buildColumnIndex(header);
@@ -213,6 +295,8 @@ export async function syncSwappingRequests(): Promise<SyncResult> {
     contactPerson: findColumn(col, "CONTACT PERSON"),
     contactNumber: findColumn(col, "CONTACT NUMBER"),
     sdCardCount: findColumn(col, "NUMBER OF SD CARD TO SWAP", "SD CARD"),
+    lastUpdated: findColumn(col, "Last Updated"),
+    sheetUpdatedBy: findColumn(col, "Updated By"),
   };
 
   const existing = await prisma.swappingRequest.findMany({
@@ -256,5 +340,27 @@ export async function syncSwappingRequests(): Promise<SyncResult> {
     });
   }
 
-  return { created: toCreate.length, total: dataRows.length };
+  const inProgress = await prisma.swappingRequest.findMany({
+    where: { status: "IN_PROGRESS" },
+    select: { requestId: true },
+  });
+  const completions = findCompletions(
+    dataRows,
+    idx,
+    new Set(inProgress.map((r) => r.requestId)),
+  );
+  await Promise.all(
+    completions.map((c) =>
+      prisma.swappingRequest.update({
+        where: { requestId: c.requestId },
+        data: {
+          status: "DISPATCHED",
+          dispatchedAt: c.dispatchedAt,
+          lastChangedBy: c.lastChangedBy,
+        },
+      }),
+    ),
+  );
+
+  return { created: toCreate.length, updated: completions.length, total: dataRows.length };
 }

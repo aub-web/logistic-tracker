@@ -34,6 +34,7 @@ export async function GET(request: Request) {
     [
       "Request ID",
       "Submitted",
+      "Swapping Date",
       "Business",
       "Business Type",
       "Contact Person",
@@ -49,6 +50,7 @@ export async function GET(request: Request) {
     requests.map((r) => [
       r.requestId,
       r.submittedAt.toISOString(),
+      r.swappingDate,
       r.businessName,
       BUSINESS_TYPE_LABEL[r.businessType] ?? r.businessType,
       r.contactPerson,

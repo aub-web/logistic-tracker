@@ -16,6 +16,25 @@ const BUSINESS_TYPE_LABEL: Record<string, string> = {
   OUTBOUND: "Outbound",
 };
 
+// Percentage widths for a fixed-layout table — always sums to 100 so the
+// table never grows wider than its container, no matter the content. Rows
+// wrap and grow taller instead of forcing a horizontal scrollbar.
+const COLUMN_WIDTHS = [
+  5, // Req. ID
+  7, // Submitted
+  6, // Request Date
+  6, // Type
+  9, // Business
+  8, // Contact
+  11, // Address
+  8, // Delivery
+  7, // Device
+  3, // Qty
+  7, // SDR / SS
+  10, // Replacement Issue
+  13, // Status
+];
+
 export default function DeviceRequestsTable({
   requests,
   statuses,
@@ -24,8 +43,13 @@ export default function DeviceRequestsTable({
   statuses: Map<string, BusinessLifecycleStatus>;
 }) {
   return (
-    <div className="mt-4 max-h-[70vh] overflow-auto rounded-xl border border-zinc-200 bg-white">
-      <table className="w-full text-left text-sm">
+    <div className="mt-4 max-h-[70vh] overflow-x-hidden overflow-y-auto rounded-xl border border-zinc-200 bg-white">
+      <table className="w-full table-fixed text-left text-sm">
+        <colgroup>
+          {COLUMN_WIDTHS.map((w, i) => (
+            <col key={i} style={{ width: `${w}%` }} />
+          ))}
+        </colgroup>
         <thead className="sticky top-0 z-10 border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
           <tr>
             <th className="px-3 py-3 font-medium">Req. ID</th>
@@ -53,59 +77,40 @@ export default function DeviceRequestsTable({
           )}
           {requests.map((r) => (
             <tr key={r.id}>
-              <td className="whitespace-nowrap px-3 py-3 font-mono text-xs text-zinc-500">
+              <td className="break-words px-3 py-3 font-mono text-xs text-zinc-500">
                 {r.requestId}
               </td>
-              <td className="whitespace-nowrap px-3 py-3 text-zinc-600">
+              <td className="break-words px-3 py-3 text-zinc-600">
                 {r.submittedAt.toLocaleString("en-PH", {
                   dateStyle: "short",
                   timeStyle: "short",
                 })}
               </td>
-              <td className="whitespace-nowrap px-3 py-3 text-zinc-600">
-                {r.requestDate || "—"}
-              </td>
-              <td className="px-3 py-3 font-medium text-zinc-900">
+              <td className="break-words px-3 py-3 text-zinc-600">{r.requestDate || "—"}</td>
+              <td className="break-words px-3 py-3 font-medium text-zinc-900">
                 {REQUEST_TYPE_LABEL[r.requestType] ?? r.requestType}
               </td>
-              <td className="max-w-[9rem] px-3 py-3">
-                <div className="truncate font-medium text-zinc-900" title={r.businessName}>
-                  {r.businessName}
-                </div>
-                <div className="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+              <td className="break-words px-3 py-3">
+                <div className="font-medium text-zinc-900">{r.businessName}</div>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-zinc-500">
                   {BUSINESS_TYPE_LABEL[r.businessType] ?? r.businessType}
                   <BusinessStatusBadge status={statuses.get(r.businessName)} />
                 </div>
               </td>
-              <td className="max-w-[8rem] px-3 py-3 text-zinc-600">
-                <div className="truncate" title={r.contactPerson}>
-                  {r.contactPerson}
-                </div>
+              <td className="break-words px-3 py-3 text-zinc-600">
+                <div>{r.contactPerson}</div>
                 <div className="text-xs text-zinc-500">{r.contactNumber}</div>
               </td>
-              <td className="max-w-[8rem] truncate px-3 py-3 text-zinc-600" title={r.businessAddress}>
-                {r.businessAddress}
-              </td>
-              <td className="max-w-[8rem] truncate px-3 py-3 text-zinc-600" title={r.deliveryMode}>
-                {r.deliveryMode}
-              </td>
-              <td className="max-w-[7rem] truncate px-3 py-3 text-zinc-600" title={r.deviceType}>
-                {r.deviceType}
-              </td>
-              <td className="px-3 py-3 text-zinc-600">{r.quantity}</td>
-              <td className="max-w-[7rem] px-3 py-3 text-zinc-600">
-                <div className="truncate" title={r.sdrName}>
-                  {r.sdrName}
-                </div>
+              <td className="break-words px-3 py-3 text-zinc-600">{r.businessAddress}</td>
+              <td className="break-words px-3 py-3 text-zinc-600">{r.deliveryMode}</td>
+              <td className="break-words px-3 py-3 text-zinc-600">{r.deviceType}</td>
+              <td className="break-words px-3 py-3 text-zinc-600">{r.quantity}</td>
+              <td className="break-words px-3 py-3 text-zinc-600">
+                <div>{r.sdrName}</div>
                 {r.ssName && <div className="text-xs text-zinc-500">{r.ssName}</div>}
               </td>
-              <td
-                className="max-w-[9rem] truncate px-3 py-3 text-zinc-600"
-                title={r.replacementIssue ?? undefined}
-              >
-                {r.replacementIssue || "—"}
-              </td>
-              <td className="max-w-[10rem] px-3 py-3">
+              <td className="break-words px-3 py-3 text-zinc-600">{r.replacementIssue || "—"}</td>
+              <td className="break-words px-3 py-3">
                 <StatusToggleButton id={r.id} status={r.status} action={setDeviceRequestStatus} />
                 {r.dispatchedAt && (
                   <div className="mt-1 text-xs text-zinc-500">

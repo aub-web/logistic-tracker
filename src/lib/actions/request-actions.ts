@@ -66,6 +66,8 @@ export async function setSwappingRequestStatus(
 export async function runSync(): Promise<{
   deviceCreated: number;
   swappingCreated: number;
+  deviceUpdated: number;
+  swappingUpdated: number;
 }> {
   await requireAdminName();
 
@@ -78,5 +80,10 @@ export async function runSync(): Promise<{
     revalidatePath(path);
   }
 
-  return { deviceCreated: device.created, swappingCreated: swapping.created };
+  return {
+    deviceCreated: device.created,
+    swappingCreated: swapping.created,
+    deviceUpdated: device.updated,
+    swappingUpdated: swapping.updated,
+  };
 }

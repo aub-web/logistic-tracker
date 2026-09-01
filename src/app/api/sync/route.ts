@@ -33,5 +33,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     deviceCreated: device.created,
     swappingCreated: swapping.created,
+    deviceUpdated: device.updated,
+    swappingUpdated: swapping.updated,
   });
 }

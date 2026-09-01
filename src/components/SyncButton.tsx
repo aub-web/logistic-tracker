@@ -24,14 +24,24 @@ export default function SyncButton() {
             try {
               const result = await runSync();
               const totalNew = result.deviceCreated + result.swappingCreated;
+              const totalUpdated = result.deviceUpdated + result.swappingUpdated;
               setIsError(false);
-              setMessage(
-                totalNew === 0
-                  ? "Up to date — no new submissions."
-                  : `Synced — ${result.deviceCreated} new device, ${result.swappingCreated} new swapping request${
+              if (totalNew === 0 && totalUpdated === 0) {
+                setMessage("Up to date — no new submissions.");
+              } else {
+                const parts = [];
+                if (totalNew > 0) {
+                  parts.push(
+                    `${result.deviceCreated} new device, ${result.swappingCreated} new swapping request${
                       totalNew === 1 ? "" : "s"
-                    }.`,
-              );
+                    }`,
+                  );
+                }
+                if (totalUpdated > 0) {
+                  parts.push(`${totalUpdated} marked Completed on the Sheet`);
+                }
+                setMessage(`Synced — ${parts.join("; ")}.`);
+              }
             } catch {
               setIsError(true);
               setMessage("Sync failed — check the Google Sheets env vars.");
