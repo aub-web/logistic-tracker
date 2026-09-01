@@ -1,6 +1,13 @@
-import { getDeployedDeviceSummary, getBusinessDeviceSummary, getBusinessLifecycleStatuses } from "@/lib/data";
+import {
+  getDeployedDeviceSummary,
+  getBusinessDeviceSummary,
+  getBusinessLifecycleStatuses,
+  getDailyDispatchedTotals,
+} from "@/lib/data";
 import type { BusinessType } from "@/generated/prisma/enums";
 import BusinessSummaryTable from "@/components/BusinessSummaryTable";
+import DailyDispatchedTable from "@/components/DailyDispatchedTable";
+import DateRangeFilter from "@/components/DateRangeFilter";
 import ExportCsvLink from "@/components/ExportCsvLink";
 
 export default async function SummaryContent({
@@ -8,16 +15,25 @@ export default async function SummaryContent({
   title,
   description,
   exportHref,
+  dailyExportHref,
+  basePath,
+  dispatchedFrom,
+  dispatchedTo,
 }: {
   businessType?: BusinessType;
   title: string;
   description: string;
   exportHref: string;
+  dailyExportHref: string;
+  basePath: string;
+  dispatchedFrom?: string;
+  dispatchedTo?: string;
 }) {
-  const [{ categories, totalDeployed }, businessRows, statuses] = await Promise.all([
+  const [{ categories, totalDeployed }, businessRows, statuses, dailyDispatched] = await Promise.all([
     getDeployedDeviceSummary(businessType),
     getBusinessDeviceSummary(businessType),
     getBusinessLifecycleStatuses(),
+    getDailyDispatchedTotals(businessType, dispatchedFrom, dispatchedTo),
   ]);
 
   return (
@@ -37,6 +53,27 @@ export default async function SummaryContent({
           <p className="mt-2 text-3xl font-semibold text-[#14293D]">{totalDeployed}</p>
         </div>
       </div>
+
+      <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-900">Total Dispatched — By Day</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Every device dispatched, any request type, grouped by the day it was marked
+            Dispatched.
+          </p>
+        </div>
+        <ExportCsvLink href={dailyExportHref} />
+      </div>
+
+      <DateRangeFilter
+        fromName="dispatchedFrom"
+        toName="dispatchedTo"
+        dateFrom={dispatchedFrom}
+        dateTo={dispatchedTo}
+        basePath={basePath}
+      />
+
+      <DailyDispatchedTable rows={dailyDispatched} />
 
       <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
         <div>

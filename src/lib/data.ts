@@ -188,10 +188,13 @@ function categorize(deviceType: string): string {
   return DEVICE_CATEGORY_RULES.find((rule) => rule.test.test(deviceType))?.category ?? OTHER_CATEGORY;
 }
 
-/** Total dispatched (deployed) devices, grouped by device type category —
- * counts both the primary request and any additional-request units on the
- * same submission, since both ship together once marked Dispatched.
- * Excludes deleted businesses, same as everywhere else. */
+/** Net devices currently in the field, grouped by device type category —
+ * Drop-off adds, Pull-out subtracts, Replacement doesn't change the count
+ * (it's a straight swap of an already-deployed unit, not a net-new or
+ * net-removed one). Counts both the primary request and any
+ * additional-request units on the same submission (same sign as the
+ * primary), since both ship together once marked Dispatched. Excludes
+ * deleted/pulled-out businesses, same as everywhere else. */
 export async function getDeployedDeviceSummary(businessType?: BusinessType): Promise<{
   categories: DeviceCategorySummary[];
   totalDeployed: number;
@@ -200,10 +203,12 @@ export async function getDeployedDeviceSummary(businessType?: BusinessType): Pro
   const dispatched = await prisma.deviceRequest.findMany({
     where: {
       status: "DISPATCHED",
+      requestType: { in: ["DROP_OFF", "PULL_OUT"] },
       ...(businessType ? { businessType } : {}),
       ...(visibleFilter ? { businessName: visibleFilter } : {}),
     },
     select: {
+      requestType: true,
       deviceType: true,
       quantity: true,
       additionalRequestDeviceType: true,
@@ -213,13 +218,20 @@ export async function getDeployedDeviceSummary(businessType?: BusinessType): Pro
 
   const counts = new Map<string, number>(DEVICE_CATEGORIES.map((category) => [category, 0]));
 
-  for (const { deviceType, quantity, additionalRequestDeviceType, additionalRequestQuantity } of dispatched) {
+  for (const {
+    requestType,
+    deviceType,
+    quantity,
+    additionalRequestDeviceType,
+    additionalRequestQuantity,
+  } of dispatched) {
+    const sign = requestType === "PULL_OUT" ? -1 : 1;
     const category = categorize(deviceType);
-    counts.set(category, (counts.get(category) ?? 0) + quantity);
+    counts.set(category, (counts.get(category) ?? 0) + sign * quantity);
 
     if (additionalRequestDeviceType && additionalRequestQuantity) {
       const additionalCategory = categorize(additionalRequestDeviceType);
-      counts.set(additionalCategory, (counts.get(additionalCategory) ?? 0) + additionalRequestQuantity);
+      counts.set(additionalCategory, (counts.get(additionalCategory) ?? 0) + sign * additionalRequestQuantity);
     }
   }
 
@@ -227,6 +239,48 @@ export async function getDeployedDeviceSummary(businessType?: BusinessType): Pro
   const totalDeployed = categories.reduce((sum, c) => sum + c.count, 0);
 
   return { categories, totalDeployed };
+}
+
+export interface DailyDispatchedRow {
+  date: string; // "YYYY-MM-DD", Manila time
+  total: number;
+}
+
+/** Gross devices dispatched per day (Manila time) — every Dispatched
+ * request counts here regardless of type (Drop-off, Replacement, or
+ * Pull-out), unlike getDeployedDeviceSummary's net field count. This is
+ * "how much did logistics dispatch on this day", not "how many devices are
+ * currently out". Primary + additional quantities both count, since both
+ * ship together. Filterable by dispatchedAt date range. */
+export async function getDailyDispatchedTotals(
+  businessType?: BusinessType,
+  dateFrom?: string,
+  dateTo?: string,
+): Promise<DailyDispatchedRow[]> {
+  const visibleFilter = excludeBusinessNames(await getExcludedBusinessNames());
+  const range = dateRangeFilter(dateFrom, dateTo);
+
+  const dispatched = await prisma.deviceRequest.findMany({
+    where: {
+      status: "DISPATCHED",
+      dispatchedAt: range ? range : { not: null },
+      ...(businessType ? { businessType } : {}),
+      ...(visibleFilter ? { businessName: visibleFilter } : {}),
+    },
+    select: { dispatchedAt: true, quantity: true, additionalRequestQuantity: true },
+  });
+
+  const totals = new Map<string, number>();
+  for (const { dispatchedAt, quantity, additionalRequestQuantity } of dispatched) {
+    if (!dispatchedAt) continue;
+    const dateKey = dispatchedAt.toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
+    const total = quantity + (additionalRequestQuantity ?? 0);
+    totals.set(dateKey, (totals.get(dateKey) ?? 0) + total);
+  }
+
+  return Array.from(totals, ([date, total]) => ({ date, total })).sort((a, b) =>
+    b.date.localeCompare(a.date),
+  );
 }
 
 export type BusinessLifecycleStatus = "ACTIVE" | "PULLED_OUT";
