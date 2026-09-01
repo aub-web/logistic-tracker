@@ -2,27 +2,41 @@ const fieldClass =
   "rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-zinc-900 focus:outline-none focus:ring-2 focus:ring-zinc-900/10";
 const labelClass = "text-xs font-medium text-zinc-500";
 
+const REQUEST_TYPE_OPTIONS = [
+  { value: "DROP_OFF", label: "Drop-off" },
+  { value: "REPLACEMENT", label: "Replacement" },
+  { value: "PULL_OUT", label: "Pull-out" },
+];
+
 export default function RequestFilters({
   query,
   sdrName,
   deviceType,
+  requestType,
   dateFrom,
   dateTo,
   sdrOptions,
   deviceOptions,
+  showRequestType,
   basePath,
 }: {
   query?: string;
   sdrName?: string;
   deviceType?: string;
+  /** Only meaningful when showRequestType is set — Device Requests only. */
+  requestType?: string;
   dateFrom?: string;
   dateTo?: string;
   sdrOptions: string[];
   /** Omit entirely for Swapping Requests, which has no device dimension. */
   deviceOptions?: string[];
+  /** Shows the Drop-off / Replacement / Pull-out filter — Device Requests only. */
+  showRequestType?: boolean;
   basePath: string;
 }) {
-  const hasActiveFilters = Boolean(query || sdrName || deviceType || dateFrom || dateTo);
+  const hasActiveFilters = Boolean(
+    query || sdrName || deviceType || requestType || dateFrom || dateTo,
+  );
 
   return (
     <form className="mt-4 flex flex-wrap items-end gap-3">
@@ -69,6 +83,27 @@ export default function RequestFilters({
             {deviceOptions.map((type) => (
               <option key={type} value={type}>
                 {type}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {showRequestType && (
+        <div className="flex flex-col gap-1">
+          <label htmlFor="type" className={labelClass}>
+            Type
+          </label>
+          <select
+            id="type"
+            name="type"
+            defaultValue={requestType ?? ""}
+            className={`w-40 ${fieldClass}`}
+          >
+            <option value="">All Types</option>
+            {REQUEST_TYPE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
               </option>
             ))}
           </select>

@@ -9,19 +9,35 @@ import DeviceRequestsTable from "@/components/DeviceRequestsTable";
 import SyncButton from "@/components/SyncButton";
 import RequestFilters from "@/components/RequestFilters";
 import ExportCsvLink from "@/components/ExportCsvLink";
+import type { DeviceRequestType } from "@/generated/prisma/enums";
+
+function parseRequestType(value?: string): DeviceRequestType | undefined {
+  return value === "DROP_OFF" || value === "REPLACEMENT" || value === "PULL_OUT"
+    ? value
+    : undefined;
+}
 
 export default async function DeviceRequestsExternalPartnerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; sdr?: string; device?: string; from?: string; to?: string }>;
+  searchParams: Promise<{
+    q?: string;
+    sdr?: string;
+    device?: string;
+    type?: string;
+    from?: string;
+    to?: string;
+  }>;
 }) {
-  const { q, sdr, device, from, to } = await searchParams;
+  const { q, sdr, device, type, from, to } = await searchParams;
+  const requestType = parseRequestType(type);
   const [requests, sdrOptions, deviceOptions, statuses] = await Promise.all([
     listDeviceRequests({
       businessType: "EXTERNAL_PARTNER",
       query: q,
       sdrName: sdr,
       deviceType: device,
+      requestType,
       dateFrom: from,
       dateTo: to,
     }),
@@ -34,6 +50,7 @@ export default async function DeviceRequestsExternalPartnerPage({
     q,
     sdr,
     device,
+    type,
     from,
     to,
     businessType: "EXTERNAL_PARTNER",
@@ -60,10 +77,12 @@ export default async function DeviceRequestsExternalPartnerPage({
         query={q}
         sdrName={sdr}
         deviceType={device}
+        requestType={type}
         dateFrom={from}
         dateTo={to}
         sdrOptions={sdrOptions}
         deviceOptions={deviceOptions}
+        showRequestType
         basePath="/device-requests/external-partner"
       />
 

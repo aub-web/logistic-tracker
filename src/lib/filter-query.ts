@@ -4,6 +4,7 @@ export function buildFilterQueryString(params: {
   q?: string;
   sdr?: string;
   device?: string;
+  type?: string;
   from?: string;
   to?: string;
   businessType?: string;
@@ -12,6 +13,7 @@ export function buildFilterQueryString(params: {
   if (params.q) sp.set("q", params.q);
   if (params.sdr) sp.set("sdr", params.sdr);
   if (params.device) sp.set("device", params.device);
+  if (params.type) sp.set("type", params.type);
   if (params.from) sp.set("from", params.from);
   if (params.to) sp.set("to", params.to);
   if (params.businessType) sp.set("businessType", params.businessType);

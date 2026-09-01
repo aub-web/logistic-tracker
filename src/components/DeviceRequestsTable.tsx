@@ -30,6 +30,7 @@ export default function DeviceRequestsTable({
           <tr>
             <th className="px-4 py-3 font-medium">Req. ID</th>
             <th className="px-4 py-3 font-medium">Submitted</th>
+            <th className="px-4 py-3 font-medium">Request Date</th>
             <th className="px-4 py-3 font-medium">Type</th>
             <th className="px-4 py-3 font-medium">Business</th>
             <th className="px-4 py-3 font-medium">Contact</th>
@@ -46,7 +47,7 @@ export default function DeviceRequestsTable({
         <tbody className="divide-y divide-zinc-100">
           {requests.length === 0 && (
             <tr>
-              <td colSpan={13} className="px-4 py-8 text-center text-sm text-zinc-500">
+              <td colSpan={14} className="px-4 py-8 text-center text-sm text-zinc-500">
                 No device requests found.
               </td>
             </tr>
@@ -61,6 +62,9 @@ export default function DeviceRequestsTable({
                   dateStyle: "medium",
                   timeStyle: "short",
                 })}
+              </td>
+              <td className="whitespace-nowrap px-4 py-3 text-zinc-600">
+                {r.requestDate || "—"}
               </td>
               <td className="px-4 py-3 font-medium text-zinc-900">
                 {REQUEST_TYPE_LABEL[r.requestType] ?? r.requestType}

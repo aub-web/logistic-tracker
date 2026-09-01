@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import type { BusinessType } from "@/generated/prisma/enums";
+import type { BusinessType, DeviceRequestType } from "@/generated/prisma/enums";
 import type { Prisma } from "@/generated/prisma/client";
 
 async function getDeletedBusinessNames(): Promise<string[]> {
@@ -84,12 +84,13 @@ export interface DeviceRequestFilters {
   query?: string;
   sdrName?: string;
   deviceType?: string;
+  requestType?: DeviceRequestType;
   dateFrom?: string;
   dateTo?: string;
 }
 
 export async function listDeviceRequests(filters: DeviceRequestFilters = {}) {
-  const { businessType, query, sdrName, deviceType, dateFrom, dateTo } = filters;
+  const { businessType, query, sdrName, deviceType, requestType, dateFrom, dateTo } = filters;
   const q = query?.trim();
   const submittedAt = dateRangeFilter(dateFrom, dateTo);
   const visibleFilter = excludeBusinessNames(await getExcludedBusinessNames());
@@ -99,6 +100,7 @@ export async function listDeviceRequests(filters: DeviceRequestFilters = {}) {
       ...(businessType ? { businessType } : {}),
       ...(sdrName ? { sdrName } : {}),
       ...(deviceType ? { deviceType } : {}),
+      ...(requestType ? { requestType } : {}),
       ...(submittedAt ? { submittedAt } : {}),
       ...(visibleFilter ? { businessName: visibleFilter } : {}),
       ...(q ? deviceSearchFilter(q) : {}),
