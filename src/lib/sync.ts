@@ -133,6 +133,7 @@ export async function syncDeviceRequests(): Promise<SyncResult> {
     quantity: findColumn(col, "QUANTITY FOR DEVICE TYPE", "QUANTITY"),
     additionalRequestDeviceType: findColumn(col, "ADDITIONAL REQUEST DEVICE TYPE"),
     additionalRequestQuantity: findColumn(col, "QUANTITY FOR ADDITIONAL REQUEST"),
+    replacementIssue: findColumn(col, "IF REPLACEMENT, PROVIDE THE ISSUE & TROUBLESHOOTING PERFORMED"),
   };
 
   const existing = await prisma.deviceRequest.findMany({
@@ -169,6 +170,7 @@ export async function syncDeviceRequests(): Promise<SyncResult> {
       quantity: parseQuantity(cell(row, idx.quantity)),
       additionalRequestDeviceType: cell(row, idx.additionalRequestDeviceType) || null,
       additionalRequestQuantity: parseOptionalQuantity(cell(row, idx.additionalRequestQuantity)),
+      replacementIssue: cell(row, idx.replacementIssue) || null,
       status,
       dispatchedAt: status === "DISPATCHED" ? new Date() : null,
     });

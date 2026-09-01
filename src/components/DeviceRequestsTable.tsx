@@ -39,6 +39,7 @@ export default function DeviceRequestsTable({
             <th className="px-4 py-3 font-medium">Device</th>
             <th className="px-4 py-3 font-medium">Qty</th>
             <th className="px-4 py-3 font-medium">SDR / SS</th>
+            <th className="px-4 py-3 font-medium">Replacement Issue</th>
             <th className="px-4 py-3 font-medium">Status</th>
             <th className="px-4 py-3 font-medium">Dispatched At</th>
             <th className="px-4 py-3 font-medium">Updated By</th>
@@ -47,7 +48,7 @@ export default function DeviceRequestsTable({
         <tbody className="divide-y divide-zinc-100">
           {requests.length === 0 && (
             <tr>
-              <td colSpan={14} className="px-4 py-8 text-center text-sm text-zinc-500">
+              <td colSpan={15} className="px-4 py-8 text-center text-sm text-zinc-500">
                 No device requests found.
               </td>
             </tr>
@@ -88,6 +89,7 @@ export default function DeviceRequestsTable({
                 <div>{r.sdrName}</div>
                 {r.ssName && <div className="text-xs text-zinc-500">{r.ssName}</div>}
               </td>
+              <td className="max-w-xs px-4 py-3 text-zinc-600">{r.replacementIssue || "—"}</td>
               <td className="px-4 py-3">
                 <StatusToggleButton id={r.id} status={r.status} action={setDeviceRequestStatus} />
               </td>

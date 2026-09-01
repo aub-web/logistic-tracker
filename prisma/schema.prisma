@@ -70,6 +70,10 @@ model DeviceRequest {
   additionalRequestDeviceType String?
   additionalRequestQuantity   Int?
 
+  // "*IF REPLACEMENT, PROVIDE THE ISSUE & TROUBLESHOOTING PERFORMED" — only
+  // filled in when requestType is REPLACEMENT.
+  replacementIssue String?
+
   status       RequestStatus @default(IN_PROGRESS)
   dispatchedAt DateTime?     @db.Timestamptz(3)
 
