@@ -16,6 +16,7 @@ enum RequestStatus {
   NEW
   IN_PROGRESS
   DISPATCHED
+  CANCELLED
 }
 
 enum DeviceRequestType {

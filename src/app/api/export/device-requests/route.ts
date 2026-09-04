@@ -14,6 +14,7 @@ const STATUS_LABEL: Record<string, string> = {
   NEW: "New",
   IN_PROGRESS: "In Progress",
   DISPATCHED: "Dispatched",
+  CANCELLED: "Cancelled",
 };
 
 const BUSINESS_TYPE_LABEL: Record<string, string> = {

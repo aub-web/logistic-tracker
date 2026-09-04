@@ -74,14 +74,20 @@ function mapBusinessType(raw: string): BusinessType {
   return "DIRECT_BUSINESS";
 }
 
-// The sheet's own "Status" column (from the existing Apps Script tracker)
-// has more states than ours (New / Completed / Cancelled at least). We only
-// track New / In Progress / Dispatched, so anything other than "Completed"
-// starts as New — that's the accurate default for a fresh submission and
-// the safe default for "Cancelled" (it was never actually dispatched). A
-// logistics team member moves it to In Progress once they start on it.
+/** Maps the sheet's own "Status" column (from the existing Apps Script
+ * tracker) to ours — "Completed" is Dispatched, "Cancelled" is Cancelled,
+ * anything else (blank, "New") isn't a terminal state, so returns null. */
+function mapSheetStatus(raw: string): "DISPATCHED" | "CANCELLED" | null {
+  const v = raw.trim().toUpperCase();
+  if (v === "COMPLETED") return "DISPATCHED";
+  if (v === "CANCELLED" || v === "CANCELED") return "CANCELLED";
+  return null;
+}
+
+// A fresh submission always starts as New — a logistics team member moves
+// it to In Progress once they start on it, same as one entered by hand.
 function mapInitialStatus(raw: string): RequestStatus {
-  return raw.trim().toUpperCase() === "COMPLETED" ? "DISPATCHED" : "NEW";
+  return mapSheetStatus(raw) ?? "NEW";
 }
 
 /** The Sheet's "Updated By" column is whatever Google Forms/Apps Script
@@ -114,40 +120,45 @@ function resolveRequestId(row: string[], idx: number, sheetRowIndex: number): st
   return cell(row, idx) || `ROW-${sheetRowIndex}`;
 }
 
-interface Completion {
+interface StatusCatchUp {
   requestId: string;
-  dispatchedAt: Date;
+  status: "DISPATCHED" | "CANCELLED";
+  dispatchedAt: Date | null;
   lastChangedBy: string | null;
 }
 
-/** Rows the Sheet marks "Completed" that our DB still shows New or In
- * Progress — catches up rows whose status changed directly on the Sheet
- * (the old Apps Script tracker workflow logistics still uses day-to-day)
- * instead of through this app's own status toggle. Attributes the change to
- * the Sheet's own "Updated By" column, same as a manual toggle would. Never
- * touches a row that's already Dispatched here, so a status set from this
- * app's UI is never overwritten by stale Sheet state. */
-function findCompletions(
+/** Rows the Sheet marks "Completed" or "Cancelled" that our DB still shows
+ * New or In Progress — catches up rows whose status changed directly on the
+ * Sheet (the old Apps Script tracker workflow logistics still uses
+ * day-to-day) instead of through this app's own status toggle. Attributes
+ * the change to the Sheet's own "Updated By" column, same as a manual
+ * toggle would. Never touches a row already Dispatched or Cancelled here,
+ * so a status set from this app's UI is never overwritten by stale Sheet
+ * state. */
+function findStatusCatchUps(
   dataRows: string[][],
   idx: { requestId: number; status: number; lastUpdated: number; sheetUpdatedBy: number },
-  notDispatchedIds: Set<string>,
-): Completion[] {
-  const completions: Completion[] = [];
+  openIds: Set<string>,
+): StatusCatchUp[] {
+  const catchUps: StatusCatchUp[] = [];
   dataRows.forEach((row, i) => {
     if (isBlankRow(row)) return;
     const sheetRowIndex = i + 2;
     const requestId = resolveRequestId(row, idx.requestId, sheetRowIndex);
-    if (!notDispatchedIds.has(requestId)) return;
-    if (cell(row, idx.status).toUpperCase() !== "COMPLETED") return;
+    if (!openIds.has(requestId)) return;
+
+    const status = mapSheetStatus(cell(row, idx.status));
+    if (!status) return;
 
     const lastUpdated = cell(row, idx.lastUpdated);
-    completions.push({
+    catchUps.push({
       requestId,
-      dispatchedAt: lastUpdated ? parseTimestamp(lastUpdated) : new Date(),
+      status,
+      dispatchedAt: status === "DISPATCHED" ? (lastUpdated ? parseTimestamp(lastUpdated) : new Date()) : null,
       lastChangedBy: formatSheetUpdatedBy(cell(row, idx.sheetUpdatedBy)),
     });
   });
-  return completions;
+  return catchUps;
 }
 
 export interface SyncResult {
@@ -241,21 +252,17 @@ export async function syncDeviceRequests(): Promise<SyncResult> {
     await prisma.deviceRequest.createMany({ data: toCreate, skipDuplicates: true });
   }
 
-  const notDispatched = await prisma.deviceRequest.findMany({
+  const open = await prisma.deviceRequest.findMany({
     where: { status: { in: ["NEW", "IN_PROGRESS"] } },
     select: { requestId: true },
   });
-  const completions = findCompletions(
-    dataRows,
-    idx,
-    new Set(notDispatched.map((r) => r.requestId)),
-  );
+  const catchUps = findStatusCatchUps(dataRows, idx, new Set(open.map((r) => r.requestId)));
   await Promise.all(
-    completions.map((c) =>
+    catchUps.map((c) =>
       prisma.deviceRequest.update({
         where: { requestId: c.requestId },
         data: {
-          status: "DISPATCHED",
+          status: c.status,
           dispatchedAt: c.dispatchedAt,
           lastChangedBy: c.lastChangedBy,
         },
@@ -263,7 +270,7 @@ export async function syncDeviceRequests(): Promise<SyncResult> {
     ),
   );
 
-  return { created: toCreate.length, updated: completions.length, total: dataRows.length };
+  return { created: toCreate.length, updated: catchUps.length, total: dataRows.length };
 }
 
 export async function syncSwappingRequests(): Promise<SyncResult> {
@@ -341,21 +348,17 @@ export async function syncSwappingRequests(): Promise<SyncResult> {
     });
   }
 
-  const notDispatched = await prisma.swappingRequest.findMany({
+  const open = await prisma.swappingRequest.findMany({
     where: { status: { in: ["NEW", "IN_PROGRESS"] } },
     select: { requestId: true },
   });
-  const completions = findCompletions(
-    dataRows,
-    idx,
-    new Set(notDispatched.map((r) => r.requestId)),
-  );
+  const catchUps = findStatusCatchUps(dataRows, idx, new Set(open.map((r) => r.requestId)));
   await Promise.all(
-    completions.map((c) =>
+    catchUps.map((c) =>
       prisma.swappingRequest.update({
         where: { requestId: c.requestId },
         data: {
-          status: "DISPATCHED",
+          status: c.status,
           dispatchedAt: c.dispatchedAt,
           lastChangedBy: c.lastChangedBy,
         },
@@ -363,5 +366,5 @@ export async function syncSwappingRequests(): Promise<SyncResult> {
     ),
   );
 
-  return { created: toCreate.length, updated: completions.length, total: dataRows.length };
+  return { created: toCreate.length, updated: catchUps.length, total: dataRows.length };
 }

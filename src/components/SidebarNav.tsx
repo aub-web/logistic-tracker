@@ -101,6 +101,27 @@ function CollapseToggleIcon({ collapsed }: { collapsed: boolean }) {
   );
 }
 
+function MenuIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5">
+      <path
+        d="M3 5.5h14M3 10h14M3 14.5h14"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="h-5 w-5">
+      <path d="M5 5l10 10M15 5 5 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 const NAV_SECTIONS = [
   {
     href: "/device-requests",
@@ -142,6 +163,7 @@ export default function SidebarNav({ name }: { name: string }) {
   // route (and therefore the default) changes.
   const [toggled, setToggled] = useState<Set<string>>(new Set());
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   function toggleCollapsed() {
     setCollapsed((prev) => !prev);
@@ -162,30 +184,60 @@ export default function SidebarNav({ name }: { name: string }) {
   }
 
   return (
-    <aside
-      className={`sticky top-0 flex h-screen shrink-0 flex-col overflow-y-auto overflow-x-hidden bg-[#14293D] transition-[width] duration-150 ${
-        collapsed ? "w-16" : "w-60"
-      }`}
-    >
-      <div className={`flex items-center justify-between px-3 py-6 ${collapsed ? "px-2" : "px-5"}`}>
-        {!collapsed && (
-          <div className="min-w-0">
-            <p className="truncate text-base font-semibold tracking-tight text-white">Atlas Capture</p>
-            <p className="mt-0.5 truncate text-xs text-white/60">Logistics PH Team</p>
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={toggleCollapsed}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-white/10"
-        >
-          <CollapseToggleIcon collapsed={collapsed} />
-        </button>
-      </div>
+    <>
+      <button
+        type="button"
+        onClick={() => setMobileOpen(true)}
+        aria-label="Open menu"
+        className={`fixed left-3 top-3 z-40 flex h-10 w-10 items-center justify-center rounded-lg bg-[#14293D] text-white shadow-lg md:hidden ${
+          mobileOpen ? "hidden" : "flex"
+        }`}
+      >
+        <MenuIcon />
+      </button>
 
-      <nav className="flex-1 space-y-1 px-3">
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex h-screen w-64 shrink-0 flex-col overflow-y-auto overflow-x-hidden bg-[#14293D] transition-transform duration-200 md:sticky md:top-0 md:translate-x-0 md:transition-[width] ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        } ${collapsed ? "md:w-16" : "md:w-60"}`}
+      >
+        <div
+          className={`flex items-center justify-between px-3 py-6 ${collapsed ? "md:px-2" : "md:px-5"}`}
+        >
+          {!collapsed && (
+            <div className="min-w-0">
+              <p className="truncate text-base font-semibold tracking-tight text-white">Atlas Capture</p>
+              <p className="mt-0.5 truncate text-xs text-white/60">Logistics PH Team</p>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close menu"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-white/10 md:hidden"
+          >
+            <CloseIcon />
+          </button>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-white/10 md:flex"
+          >
+            <CollapseToggleIcon collapsed={collapsed} />
+          </button>
+        </div>
+
+        <nav className="flex-1 space-y-1 px-3">
         {NAV_SECTIONS.map((section) => {
           const active = pathname.startsWith(section.href);
           const open = !collapsed && isSectionOpen(section.href);
@@ -201,6 +253,7 @@ export default function SidebarNav({ name }: { name: string }) {
                 <Link
                   href={section.href}
                   title={section.label}
+                  onClick={() => setMobileOpen(false)}
                   className={`flex flex-1 items-center gap-3 py-2 text-sm font-medium ${
                     collapsed ? "justify-center pl-0 pr-0" : "pl-2.5 pr-1"
                   } ${active ? "text-white" : "text-white/70 hover:text-white"}`}
@@ -232,6 +285,7 @@ export default function SidebarNav({ name }: { name: string }) {
                       <Link
                         key={child.href}
                         href={child.href}
+                        onClick={() => setMobileOpen(false)}
                         className={`block rounded-md px-2 py-1.5 text-xs font-medium transition ${
                           childActive
                             ? "bg-white/10 text-white"
@@ -251,6 +305,7 @@ export default function SidebarNav({ name }: { name: string }) {
         <Link
           href="/pulled-out"
           title="Pulled Out"
+          onClick={() => setMobileOpen(false)}
           className={`flex items-center rounded-lg border-l-2 py-2 text-sm font-medium transition ${
             collapsed ? "justify-center pl-0 pr-0" : "gap-3 pl-2.5 pr-3"
           } ${
@@ -268,6 +323,7 @@ export default function SidebarNav({ name }: { name: string }) {
         <Link
           href="/trash"
           title="Trash"
+          onClick={() => setMobileOpen(false)}
           className={`flex items-center rounded-lg border-l-2 py-2 text-sm font-medium transition ${
             collapsed ? "justify-center pl-0 pr-0" : "gap-3 pl-2.5 pr-3"
           } ${
@@ -291,6 +347,7 @@ export default function SidebarNav({ name }: { name: string }) {
         )}
         <LogoutButton collapsed={collapsed} />
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

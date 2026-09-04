@@ -14,6 +14,7 @@ const STATUS_LABEL: Record<string, string> = {
   NEW: "New",
   IN_PROGRESS: "In Progress",
   DISPATCHED: "Dispatched",
+  CANCELLED: "Cancelled",
 };
 
 function parseBusinessType(value: string | null): BusinessType | undefined {
