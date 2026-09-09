@@ -26,7 +26,7 @@ export default function SyncButton() {
               const totalNew = result.deviceCreated + result.swappingCreated;
               const totalUpdated = result.deviceUpdated + result.swappingUpdated;
               setIsError(false);
-              if (totalNew === 0 && totalUpdated === 0) {
+              if (totalNew === 0 && totalUpdated === 0 && result.deviceFlagged === 0) {
                 setMessage("Up to date — no new submissions.");
               } else {
                 const parts = [];
@@ -39,6 +39,11 @@ export default function SyncButton() {
                 }
                 if (totalUpdated > 0) {
                   parts.push(`${totalUpdated} marked Completed on the Sheet`);
+                }
+                if (result.deviceFlagged > 0) {
+                  parts.push(
+                    `${result.deviceFlagged} held back for review — quantity looked like a typo`,
+                  );
                 }
                 setMessage(`Synced — ${parts.join("; ")}.`);
               }

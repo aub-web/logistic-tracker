@@ -68,6 +68,7 @@ export async function runSync(): Promise<{
   swappingCreated: number;
   deviceUpdated: number;
   swappingUpdated: number;
+  deviceFlagged: number;
 }> {
   await requireAdminName();
 
@@ -85,5 +86,6 @@ export async function runSync(): Promise<{
     swappingCreated: swapping.created,
     deviceUpdated: device.updated,
     swappingUpdated: swapping.updated,
+    deviceFlagged: device.flagged,
   };
 }

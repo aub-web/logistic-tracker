@@ -35,5 +35,6 @@ export async function POST(request: Request) {
     swappingCreated: swapping.created,
     deviceUpdated: device.updated,
     swappingUpdated: swapping.updated,
+    deviceFlagged: device.flagged,
   });
 }

@@ -184,9 +184,12 @@ const DEVICE_CATEGORY_RULES: { category: string; test: RegExp }[] = [
 ];
 
 const OTHER_CATEGORY = "Other";
-const DEVICE_CATEGORIES = [...DEVICE_CATEGORY_RULES.map((r) => r.category), OTHER_CATEGORY];
+export const DEVICE_CATEGORIES = [...DEVICE_CATEGORY_RULES.map((r) => r.category), OTHER_CATEGORY];
 
-function categorize(deviceType: string): string {
+/** Exported so an inventory import file's free-form device names get
+ * bucketed by the exact same rule as every request's DEVICE TYPE — the
+ * whole point of importing a physical count is to compare like with like. */
+export function categorize(deviceType: string): string {
   return DEVICE_CATEGORY_RULES.find((rule) => rule.test.test(deviceType))?.category ?? OTHER_CATEGORY;
 }
 
@@ -553,4 +556,47 @@ export async function getPulledOutBusinessSummary(query?: string): Promise<Busin
   }
 
   return Array.from(rows.values()).sort((a, b) => a.businessName.localeCompare(b.businessName));
+}
+
+export interface InventoryTallyRow {
+  category: string;
+  systemCount: number;
+  physicalCount: number | null;
+  variance: number | null;
+}
+
+export interface InventoryImportSummary {
+  importedBy: string;
+  importedAt: Date;
+  rows: InventoryTallyRow[];
+}
+
+/** The most recently uploaded physical inventory count, lined up against
+ * this app's own Total Deployed per category so a mismatch is visible at a
+ * glance — that's the whole point of importing it. Whole-company only (no
+ * businessType breakdown), since a physical stock count isn't split that
+ * way. Null when nobody's ever imported one. */
+export async function getLatestInventoryImport(): Promise<InventoryImportSummary | null> {
+  const [batch, { categories }] = await Promise.all([
+    prisma.inventoryImportBatch.findFirst({
+      orderBy: { importedAt: "desc" },
+      include: { entries: true },
+    }),
+    getDeployedDeviceSummary(),
+  ]);
+  if (!batch) return null;
+
+  const physicalByCategory = new Map(batch.entries.map((e) => [e.category, e.quantity]));
+  const rows: InventoryTallyRow[] = DEVICE_CATEGORIES.map((category) => {
+    const systemCount = categories.find((c) => c.category === category)?.count ?? 0;
+    const physicalCount = physicalByCategory.get(category) ?? null;
+    return {
+      category,
+      systemCount,
+      physicalCount,
+      variance: physicalCount === null ? null : physicalCount - systemCount,
+    };
+  });
+
+  return { importedBy: batch.importedBy, importedAt: batch.importedAt, rows };
 }

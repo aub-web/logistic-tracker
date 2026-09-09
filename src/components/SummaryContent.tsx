@@ -3,12 +3,15 @@ import {
   getBusinessDeviceSummary,
   getBusinessLifecycleStatuses,
   getDailyDispatchedTotals,
+  getLatestInventoryImport,
 } from "@/lib/data";
 import type { BusinessType } from "@/generated/prisma/enums";
 import BusinessSummaryTable from "@/components/BusinessSummaryTable";
 import DailyDispatchedTable from "@/components/DailyDispatchedTable";
 import DateRangeFilter from "@/components/DateRangeFilter";
 import ExportCsvLink from "@/components/ExportCsvLink";
+import InventoryImportForm from "@/components/InventoryImportForm";
+import InventoryTallyTable from "@/components/InventoryTallyTable";
 
 export default async function SummaryContent({
   businessType,
@@ -29,12 +32,14 @@ export default async function SummaryContent({
   dispatchedFrom?: string;
   dispatchedTo?: string;
 }) {
-  const [{ categories, totalDeployed }, businessRows, statuses, dailyDispatched] = await Promise.all([
-    getDeployedDeviceSummary(businessType),
-    getBusinessDeviceSummary(businessType),
-    getBusinessLifecycleStatuses(),
-    getDailyDispatchedTotals(businessType, dispatchedFrom, dispatchedTo),
-  ]);
+  const [{ categories, totalDeployed }, businessRows, statuses, dailyDispatched, inventory] =
+    await Promise.all([
+      getDeployedDeviceSummary(businessType),
+      getBusinessDeviceSummary(businessType),
+      getBusinessLifecycleStatuses(),
+      getDailyDispatchedTotals(businessType, dispatchedFrom, dispatchedTo),
+      businessType ? Promise.resolve(null) : getLatestInventoryImport(),
+    ]);
 
   return (
     <div>
@@ -53,6 +58,24 @@ export default async function SummaryContent({
           <p className="mt-2 text-3xl font-semibold text-[#14293D]">{totalDeployed}</p>
         </div>
       </div>
+
+      {!businessType && (
+        <>
+          <div className="mt-10">
+            <h2 className="text-lg font-semibold text-zinc-900">Inventory Tally</h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              Import a physical count file (CSV with a device type and quantity column) to check it
+              against Total Deployed above.
+            </p>
+          </div>
+
+          <div className="mt-4">
+            <InventoryImportForm />
+          </div>
+
+          <InventoryTallyTable inventory={inventory} />
+        </>
+      )}
 
       <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
         <div>

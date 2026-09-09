@@ -60,6 +60,18 @@ function parseOptionalQuantity(raw: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+// Every legitimate device request quantity seen so far tops out in the low
+// dozens (the largest real one is 44). A single request above this is
+// almost certainly a typo (one slipped through once at 714 and skewed
+// Total Deployed negative) rather than a real order, so it's never
+// auto-marked Dispatched — it stays New/In Progress for the team to review
+// and correct here instead of silently corrupting the deployed count.
+const MAX_SANE_DEVICE_QUANTITY = 100;
+
+function isSuspiciousDeviceQuantity(quantity: number): boolean {
+  return quantity > MAX_SANE_DEVICE_QUANTITY;
+}
+
 function mapDeviceRequestType(raw: string): DeviceRequestType {
   const v = raw.toUpperCase();
   if (v.includes("REPLAC")) return "REPLACEMENT";
@@ -165,6 +177,8 @@ export interface SyncResult {
   created: number;
   /** Existing rows the Sheet's own Status/Updated By caught up to Dispatched. */
   updated: number;
+  /** Rows held back from Dispatched because their quantity looked like a typo. */
+  flagged: number;
   total: number;
 }
 
@@ -179,7 +193,7 @@ export async function syncDeviceRequests(): Promise<SyncResult> {
   }
 
   const rows = await fetchSheetRows(spreadsheetId, gid);
-  if (rows.length < 2) return { created: 0, updated: 0, total: 0 };
+  if (rows.length < 2) return { created: 0, updated: 0, flagged: 0, total: 0 };
 
   const [header, ...dataRows] = rows;
   const col = buildColumnIndex(header);
@@ -214,6 +228,7 @@ export async function syncDeviceRequests(): Promise<SyncResult> {
   const existingIds = new Set(existing.map((r) => r.requestId));
 
   const toCreate: DeviceRequestCreateManyInput[] = [];
+  let flaggedOnCreate = 0;
 
   dataRows.forEach((row, i) => {
     if (isBlankRow(row)) return;
@@ -221,7 +236,12 @@ export async function syncDeviceRequests(): Promise<SyncResult> {
     const requestId = resolveRequestId(row, idx.requestId, sheetRowIndex);
     if (existingIds.has(requestId)) return;
 
-    const status = mapInitialStatus(cell(row, idx.status));
+    const quantity = parseQuantity(cell(row, idx.quantity));
+    let status = mapInitialStatus(cell(row, idx.status));
+    if (status === "DISPATCHED" && isSuspiciousDeviceQuantity(quantity)) {
+      status = "NEW";
+      flaggedOnCreate += 1;
+    }
 
     toCreate.push({
       requestId,
@@ -239,7 +259,7 @@ export async function syncDeviceRequests(): Promise<SyncResult> {
       contactNumber: cell(row, idx.contactNumber),
       deliveryMode: cell(row, idx.deliveryMode),
       deviceType: cell(row, idx.deviceType),
-      quantity: parseQuantity(cell(row, idx.quantity)),
+      quantity,
       additionalRequestDeviceType: cell(row, idx.additionalRequestDeviceType) || null,
       additionalRequestQuantity: parseOptionalQuantity(cell(row, idx.additionalRequestQuantity)),
       replacementIssue: cell(row, idx.replacementIssue) || null,
@@ -254,9 +274,13 @@ export async function syncDeviceRequests(): Promise<SyncResult> {
 
   const open = await prisma.deviceRequest.findMany({
     where: { status: { in: ["NEW", "IN_PROGRESS"] } },
-    select: { requestId: true },
+    select: { requestId: true, quantity: true },
   });
-  const catchUps = findStatusCatchUps(dataRows, idx, new Set(open.map((r) => r.requestId)));
+  const quantityById = new Map(open.map((r) => [r.requestId, r.quantity]));
+  const allCatchUps = findStatusCatchUps(dataRows, idx, new Set(open.map((r) => r.requestId)));
+  const catchUps = allCatchUps.filter(
+    (c) => c.status !== "DISPATCHED" || !isSuspiciousDeviceQuantity(quantityById.get(c.requestId) ?? 0),
+  );
   await Promise.all(
     catchUps.map((c) =>
       prisma.deviceRequest.update({
@@ -270,7 +294,12 @@ export async function syncDeviceRequests(): Promise<SyncResult> {
     ),
   );
 
-  return { created: toCreate.length, updated: catchUps.length, total: dataRows.length };
+  return {
+    created: toCreate.length,
+    updated: catchUps.length,
+    flagged: flaggedOnCreate + (allCatchUps.length - catchUps.length),
+    total: dataRows.length,
+  };
 }
 
 export async function syncSwappingRequests(): Promise<SyncResult> {
@@ -284,7 +313,7 @@ export async function syncSwappingRequests(): Promise<SyncResult> {
   }
 
   const rows = await fetchSheetRows(spreadsheetId, gid);
-  if (rows.length < 2) return { created: 0, updated: 0, total: 0 };
+  if (rows.length < 2) return { created: 0, updated: 0, flagged: 0, total: 0 };
 
   const [header, ...dataRows] = rows;
   const col = buildColumnIndex(header);
@@ -366,5 +395,5 @@ export async function syncSwappingRequests(): Promise<SyncResult> {
     ),
   );
 
-  return { created: toCreate.length, updated: catchUps.length, total: dataRows.length };
+  return { created: toCreate.length, updated: catchUps.length, flagged: 0, total: dataRows.length };
 }

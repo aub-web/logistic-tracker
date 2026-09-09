@@ -121,6 +121,34 @@ model ExtraSdCardEntry {
   @@index([businessName])
 }
 
+// One upload of a physical inventory count file, so it's tallied against
+// what the app computes as deployed. Each upload replaces the prior one as
+// "current" (see InventoryCountEntry) but old batches are kept for history.
+model InventoryImportBatch {
+  id String @id @default(cuid())
+
+  importedBy String
+  importedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  entries InventoryCountEntry[]
+}
+
+// One category's counted quantity from a single inventory import — the
+// uploaded file's free-form device names are bucketed into the same
+// categories (Mono iPhones / Mono Insta 360 / Multicam / Powerbank / Other)
+// used everywhere else, via the same categorize() rules.
+model InventoryCountEntry {
+  id String @id @default(cuid())
+
+  batchId String
+  batch   InventoryImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  category String
+  quantity Int
+
+  @@index([batchId])
+}
+
 model SwappingRequest {
   id String @id @default(cuid())
 
