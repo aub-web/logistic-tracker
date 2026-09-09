@@ -1,5 +1,10 @@
 import type { InventoryImportSummary } from "@/lib/data";
 
+// Powerbank isn't tracked as its own available count — it's handed out
+// 1:1 alongside Multicam and Mono Insta 360 units, so its own "available"
+// number wouldn't mean anything independent of those.
+const EXCLUDED_CATEGORIES = new Set(["Powerbank"]);
+
 /** Units sitting in the warehouse ready to send out — the last imported
  * physical count minus what's currently deployed. Only shown for
  * categories that actually have an imported count; a category nobody's
@@ -9,7 +14,9 @@ export default function AvailableUnitsCards({
 }: {
   inventory: InventoryImportSummary | null;
 }) {
-  const available = (inventory?.rows ?? []).filter((r) => r.physicalCount !== null);
+  const available = (inventory?.rows ?? []).filter(
+    (r) => r.physicalCount !== null && !EXCLUDED_CATEGORIES.has(r.category),
+  );
   if (available.length === 0) return null;
 
   return (
