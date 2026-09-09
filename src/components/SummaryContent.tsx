@@ -12,6 +12,7 @@ import DateRangeFilter from "@/components/DateRangeFilter";
 import ExportCsvLink from "@/components/ExportCsvLink";
 import InventoryImportForm from "@/components/InventoryImportForm";
 import InventoryTallyTable from "@/components/InventoryTallyTable";
+import AvailableUnitsCards from "@/components/AvailableUnitsCards";
 
 export default async function SummaryContent({
   businessType,
@@ -61,6 +62,8 @@ export default async function SummaryContent({
 
       {!businessType && (
         <>
+          <AvailableUnitsCards inventory={inventory} />
+
           <div className="mt-10">
             <h2 className="text-lg font-semibold text-zinc-900">Inventory Tally</h2>
             <p className="mt-1 text-sm text-zinc-500">
