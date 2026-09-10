@@ -8,7 +8,7 @@ export default function InventoryTallyTable({
   if (!inventory) {
     return (
       <div className="mt-4 rounded-xl border border-dashed border-zinc-300 bg-white px-4 py-6 text-center text-sm text-zinc-500">
-        No inventory imported yet — upload a physical count above to tally it against Total Deployed.
+        No inventory imported yet — upload an available-units count above.
       </div>
     );
   }
@@ -19,35 +19,21 @@ export default function InventoryTallyTable({
         <thead className="border-b border-zinc-200 bg-zinc-50 text-xs uppercase tracking-wide text-zinc-500">
           <tr>
             <th className="px-4 py-3 font-medium">Category</th>
-            <th className="px-4 py-3 text-right font-medium">System (Deployed)</th>
-            <th className="px-4 py-3 text-right font-medium">Physical Count</th>
-            <th className="px-4 py-3 text-right font-medium">Variance</th>
+            <th className="px-4 py-3 text-right font-medium">Deployed</th>
+            <th className="px-4 py-3 text-right font-medium">Available (Imported)</th>
+            <th className="px-4 py-3 text-right font-medium">Total Units</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-zinc-100">
           {inventory.rows.map((row) => (
             <tr key={row.category}>
               <td className="px-4 py-3 font-medium text-zinc-900">{row.category}</td>
-              <td className="px-4 py-3 text-right text-zinc-600">{row.systemCount}</td>
+              <td className="px-4 py-3 text-right text-zinc-600">{row.deployedCount}</td>
               <td className="px-4 py-3 text-right text-zinc-600">
-                {row.physicalCount === null ? "—" : row.physicalCount}
+                {row.availableCount === null ? "—" : row.availableCount}
               </td>
-              <td
-                className={`px-4 py-3 text-right font-semibold ${
-                  row.variance === null
-                    ? "text-zinc-400"
-                    : row.variance === 0
-                      ? "text-emerald-600"
-                      : "text-rose-600"
-                }`}
-              >
-                {row.variance === null
-                  ? "—"
-                  : row.variance === 0
-                    ? "Tallied"
-                    : row.variance > 0
-                      ? `+${row.variance}`
-                      : row.variance}
+              <td className="px-4 py-3 text-right font-semibold text-zinc-900">
+                {row.totalCount === null ? "—" : row.totalCount}
               </td>
             </tr>
           ))}

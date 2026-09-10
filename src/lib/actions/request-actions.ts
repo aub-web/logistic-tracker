@@ -18,12 +18,7 @@ const SWAPPING_REQUEST_PATHS = [
   "/swapping-requests/external-partner",
 ];
 
-const SUMMARY_PATHS = [
-  "/summary",
-  "/summary/direct-business",
-  "/summary/external-partner",
-  "/pulled-out",
-];
+const SUMMARY_PATHS = ["/summary", "/pulled-out"];
 
 export async function setDeviceRequestStatus(
   id: string,

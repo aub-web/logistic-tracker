@@ -143,16 +143,6 @@ const NAV_SECTIONS = [
       { href: "/swapping-requests/direct-business", label: "Direct Business" },
     ],
   },
-  {
-    href: "/summary",
-    label: "Summary",
-    color: "bg-emerald-500",
-    icon: ChartIcon,
-    children: [
-      { href: "/summary/external-partner", label: "External Partner" },
-      { href: "/summary/direct-business", label: "Direct Business" },
-    ],
-  },
 ];
 
 export default function SidebarNav({ name }: { name: string }) {
@@ -301,6 +291,24 @@ export default function SidebarNav({ name }: { name: string }) {
             </div>
           );
         })}
+
+        <Link
+          href="/summary"
+          title="Summary"
+          onClick={() => setMobileOpen(false)}
+          className={`flex items-center rounded-lg border-l-2 py-2 text-sm font-medium transition ${
+            collapsed ? "justify-center pl-0 pr-0" : "gap-3 pl-2.5 pr-3"
+          } ${
+            pathname === "/summary"
+              ? "border-emerald-400 bg-white/10 text-white"
+              : "border-transparent text-white/70 hover:bg-white/5 hover:text-white"
+          }`}
+        >
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-emerald-500">
+            <ChartIcon />
+          </span>
+          {!collapsed && "Summary"}
+        </Link>
 
         <Link
           href="/pulled-out"

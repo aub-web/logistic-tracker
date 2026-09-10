@@ -177,7 +177,7 @@ export interface DeviceCategorySummary {
 // actually reports on. Anything that doesn't match falls into "Other" so a
 // new/renamed device type never silently disappears from the total.
 const DEVICE_CATEGORY_RULES: { category: string; test: RegExp }[] = [
-  { category: "Mono iPhones", test: /mono.*iphone/i },
+  { category: "Mono iPhones", test: /iphone/i },
   { category: "Mono Insta 360", test: /insta.?360|mono.*360/i },
   { category: "Multicam", test: /multicam|gohan/i },
   { category: "Powerbank", test: /power ?bank/i },
@@ -560,9 +560,15 @@ export async function getPulledOutBusinessSummary(query?: string): Promise<Busin
 
 export interface InventoryTallyRow {
   category: string;
-  systemCount: number;
-  physicalCount: number | null;
-  variance: number | null;
+  /** From Total Deployed — how many are out with businesses right now. */
+  deployedCount: number;
+  /** The imported count as-is — this already IS "how many are sitting
+   * available right now", not a total to subtract Deployed from. Null when
+   * this category wasn't in the imported file. */
+  availableCount: number | null;
+  /** Deployed + Available — the only way to see a total unit count at all,
+   * since nothing else in the app tracks how many units exist in total. */
+  totalCount: number | null;
 }
 
 export interface InventoryImportSummary {
@@ -571,11 +577,12 @@ export interface InventoryImportSummary {
   rows: InventoryTallyRow[];
 }
 
-/** The most recently uploaded physical inventory count, lined up against
- * this app's own Total Deployed per category so a mismatch is visible at a
- * glance — that's the whole point of importing it. Whole-company only (no
- * businessType breakdown), since a physical stock count isn't split that
- * way. Null when nobody's ever imported one. */
+/** The most recently uploaded "available units" count (what's physically on
+ * hand, ready to send out — not a total-owned count), lined up next to this
+ * app's own Total Deployed per category so the team can see Deployed +
+ * Available = the total unit count they don't otherwise have anywhere.
+ * Whole-company only (no businessType breakdown), since a physical stock
+ * count isn't split that way. Null when nobody's ever imported one. */
 export async function getLatestInventoryImport(): Promise<InventoryImportSummary | null> {
   const [batch, { categories }] = await Promise.all([
     prisma.inventoryImportBatch.findFirst({
@@ -586,15 +593,15 @@ export async function getLatestInventoryImport(): Promise<InventoryImportSummary
   ]);
   if (!batch) return null;
 
-  const physicalByCategory = new Map(batch.entries.map((e) => [e.category, e.quantity]));
+  const availableByCategory = new Map(batch.entries.map((e) => [e.category, e.quantity]));
   const rows: InventoryTallyRow[] = DEVICE_CATEGORIES.map((category) => {
-    const systemCount = categories.find((c) => c.category === category)?.count ?? 0;
-    const physicalCount = physicalByCategory.get(category) ?? null;
+    const deployedCount = categories.find((c) => c.category === category)?.count ?? 0;
+    const availableCount = availableByCategory.get(category) ?? null;
     return {
       category,
-      systemCount,
-      physicalCount,
-      variance: physicalCount === null ? null : physicalCount - systemCount,
+      deployedCount,
+      availableCount,
+      totalCount: availableCount === null ? null : deployedCount + availableCount,
     };
   });
 
